@@ -36,7 +36,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     }
   }, [messages, isTyping]);
 
-  // Speech Recognition Setup
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -51,13 +50,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         setIsListening(false);
       };
 
-      recognitionRef.current.onerror = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-      };
+      recognitionRef.current.onerror = () => setIsListening(false);
+      recognitionRef.current.onend = () => setIsListening(false);
     }
   }, [lang]);
 
@@ -80,11 +74,10 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
       try {
         await window.aistudio.openSelectKey();
         setError(null);
-        setTimeout(() => {
-          if (messages.length > 0 && messages[messages.length-1].role === 'user') {
-            handleSendMessage();
-          }
-        }, 500);
+        // Instruction: Proceed assuming success
+        if (messages.length > 0 && messages[messages.length-1].role === 'user') {
+          handleSendMessage();
+        }
       } catch (e) {
         console.error("Key selection failed", e);
       }
@@ -93,14 +86,12 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
   const playAudioResponse = async (text: string) => {
     if (!isVoiceEnabled) return;
-
     const base64Audio = await speakText(text);
     if (base64Audio) {
       try {
         if (!audioContextRef.current) {
           audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
         }
-        
         const ctx = audioContextRef.current;
         const binaryString = atob(base64Audio);
         const len = binaryString.length;
@@ -108,14 +99,12 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         for (let i = 0; i < len; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
-
         const dataInt16 = new Int16Array(bytes.buffer);
         const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
         const channelData = buffer.getChannelData(0);
         for (let i = 0; i < dataInt16.length; i++) {
           channelData[i] = dataInt16[i] / 32768.0;
         }
-
         const source = ctx.createBufferSource();
         source.buffer = buffer;
         source.connect(ctx.destination);
@@ -143,25 +132,20 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     try {
       const response = await chatWithJoy(userMsg, { userName });
       setMessages(prev => [...prev, { role: 'joy', text: response }]);
-      
-      if (isVoiceEnabled) {
-        await playAudioResponse(response);
-      }
+      if (isVoiceEnabled) await playAudioResponse(response);
     } catch (error: any) {
-      console.error("Chat Error:", error);
       const errorMsg = error.message?.toLowerCase() || "";
       const isEntityNotFoundError = errorMsg.includes("requested entity was not found") || errorMsg.includes("404");
-      const isUnauthorizedError = errorMsg.includes("api key") || errorMsg.includes("unauthorized") || errorMsg.includes("invalid_argument") || errorMsg.includes("key not found");
       
       if (isEntityNotFoundError) {
-        setError(lang === 'bn' ? "আপনার এপিআই কী-তে এই মডেল ব্যবহারের অনুমতি নেই। অনুগ্রহ করে একটি পেইড প্রজেক্ট থেকে কী সিলেক্ট করুন।" : "Your API Key lacks access to this model. Please select a key from a Paid billing project.");
-      } else if (isUnauthorizedError) {
-        setError(lang === 'bn' ? "এপিআই কী কাজ করছে না। সঠিক কী সিলেক্ট করুন।" : "API Key is invalid or not found. Please select a valid key.");
+        setError(lang === 'bn' ? "এই মডেলটি আপনার এপিআই কী সাপোর্ট করছে না। অনুগ্রহ করে একটি পেইড প্রজেক্টের কী সিলেক্ট করুন।" : "This model is not found with your key. Please select a key from a Paid project.");
+        // Instruction: Reset key selection state and prompt user
+        handleSelectKey();
       } else {
-        setError(lang === 'bn' ? "কানেকশনে সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।" : "Connection problem. Please try again.");
+        setError(lang === 'bn' ? "কানেকশন এরর। অনুগ্রহ করে এপিআই কী চেক করুন।" : "Connection error. Please check your API key.");
       }
       
-      setMessages(prev => [...prev, { role: 'joy', text: lang === 'bn' ? "দুঃখিত, সংযোগ স্থাপন করা যাচ্ছে না। আপনার এপিআই কী-টি ঠিক করে নিন।" : "Sorry, I can't connect. Please fix your API Key selection." }]);
+      setMessages(prev => [...prev, { role: 'joy', text: lang === 'bn' ? "দুঃখিত, আমি এই মুহূর্তে সংযুক্ত হতে পারছি না। এপিআই কী-টি পুনরায় চেক করুন।" : "Sorry, I can't connect right now. Please re-check your API key." }]);
     } finally {
       setIsTyping(false);
     }
@@ -169,13 +153,12 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
   return (
     <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end">
-      {/* Chat Window */}
       {isOpen && (
         <div className="mb-4 w-[350px] md:w-[400px] h-[600px] bg-white rounded-[32px] shadow-2xl border border-blue-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
           <div className="p-5 bg-blue-600 text-white flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center border border-white/20 overflow-hidden">
-                <img src={AI_AVATAR_URL} alt="Joy" className="w-full h-full object-cover scale-110" />
+                <img src={AI_AVATAR_URL} alt="Joy" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h4 className="font-black text-sm leading-tight">{t.ai_name}</h4>
@@ -183,11 +166,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <button 
-                onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
-                className={`p-2 rounded-lg transition-colors ${isVoiceEnabled ? 'bg-white/20 text-white' : 'text-white/50'}`}
-                title={isVoiceEnabled ? "ভয়েস বন্ধ করুন" : "ভয়েস চালু করুন"}
-              >
+              <button onClick={() => setIsVoiceEnabled(!isVoiceEnabled)} className={`p-2 rounded-lg transition-colors ${isVoiceEnabled ? 'bg-white/20 text-white' : 'text-white/50'}`}>
                 {isVoiceEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
               </button>
               <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
@@ -199,26 +178,17 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50 custom-scrollbar">
             {messages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 opacity-40">
-                <div className="relative mb-6">
-                  <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-2xl border-4 border-white rotate-3">
-                     <img src={AI_AVATAR_URL} alt="Joy" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="absolute inset-0 bg-blue-400 blur-2xl opacity-20 animate-pulse"></div>
+                <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-2xl border-4 border-white mb-6">
+                  <img src={AI_AVATAR_URL} alt="Joy" className="w-full h-full object-cover" />
                 </div>
-                <p className="text-sm font-bold leading-relaxed text-slate-600 px-4">
-                  {lang === 'bn' 
-                    ? 'নমস্কার! আমি জয় কুমার বিশ্বাস। মাইক্রোফোন আইকনে ক্লিক করে সরাসরি আমার সাথে কথা বলতে পারেন।' 
-                    : 'Hello! I am Joy Kumar Biswas. Click the microphone icon to talk to me directly.'}
+                <p className="text-sm font-bold leading-relaxed text-slate-600">
+                  {lang === 'bn' ? 'নমস্কার! আমি জয় কুমার বিশ্বাস। বলুন আপনাকে কীভাবে সাহায্য করতে পারি?' : 'Hello! I am Joy Kumar Biswas. How can I help you today?'}
                 </p>
               </div>
             )}
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                <div className={`max-w-[85%] p-4 rounded-2xl text-sm font-bold shadow-sm whitespace-pre-wrap ${
-                  msg.role === 'user' 
-                    ? 'bg-blue-600 text-white rounded-tr-none' 
-                    : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'
-                }`}>
+                <div className={`max-w-[85%] p-4 rounded-2xl text-sm font-bold shadow-sm whitespace-pre-wrap ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}`}>
                   {msg.text}
                 </div>
               </div>
@@ -226,66 +196,33 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
             {isTyping && (
               <div className="flex justify-start">
                 <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-100 shadow-sm flex items-center gap-2">
-                  <div className="flex gap-1">
-                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></span>
-                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                  </div>
+                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></span>
+                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
                 </div>
               </div>
             )}
           </div>
 
           {error && (
-            <div className="mx-4 mb-2 p-4 bg-amber-50 text-amber-800 rounded-2xl text-[11px] font-bold flex flex-col gap-3 border border-amber-200 shadow-sm">
-              <div className="flex items-center gap-2">
-                <AlertCircle size={16} className="text-amber-600" /> 
-                <span>{error}</span>
+            <div className="mx-4 mb-2 p-4 bg-amber-50 text-amber-800 rounded-2xl text-[11px] font-bold border border-amber-200">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle size={16} className="text-amber-600" /> <span>{error}</span>
               </div>
-              <div className="flex flex-col gap-2">
-                <button 
-                  onClick={handleSelectKey} 
-                  className="w-full py-2.5 bg-amber-600 text-white rounded-xl flex items-center justify-center gap-2 shadow-md hover:bg-amber-700 active:scale-95 transition-all"
-                >
-                  <Key size={14} /> এপিআই কী সিলেক্ট করুন
-                </button>
-                <div className="flex items-center justify-between gap-2">
-                  <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="text-[9px] font-bold text-amber-600 underline flex items-center gap-1">
-                    পেইড জিসিপি প্রজেক্ট গাইড <ExternalLink size={10} />
-                  </a>
-                  <button onClick={() => handleSendMessage()} className="text-amber-700 hover:text-amber-900 flex items-center gap-1">
-                    <RefreshCw size={10} /> পুনরায় চেষ্টা করুন
-                  </button>
-                </div>
-              </div>
+              <button onClick={handleSelectKey} className="w-full py-2 bg-amber-600 text-white rounded-lg flex items-center justify-center gap-2">
+                <Key size={14} /> এপিআই কী পরিবর্তন করুন
+              </button>
             </div>
           )}
 
           <div className="p-4 bg-white border-t border-slate-100">
             <div className="flex items-center gap-2">
-              <button 
-                type="button"
-                onClick={toggleListening}
-                className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                  isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                }`}
-              >
+              <button onClick={toggleListening} className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${isListening ? 'bg-red-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
                 {isListening ? <MicOff size={20} /> : <Mic size={20} />}
               </button>
-              
               <form onSubmit={handleSendMessage} className="relative flex-1">
-                <input 
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder={isListening ? (lang === 'bn' ? "বলুন, আমি শুনছি..." : "Listening...") : t.ask_joy}
-                  className="w-full pl-5 pr-12 py-3.5 bg-slate-100 border-none rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:outline-none focus:bg-white transition-all font-bold text-slate-800"
-                />
-                <button 
-                  type="submit" 
-                  disabled={!input.trim() || isTyping}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-                >
+                <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder={t.ask_joy} className="w-full pl-5 pr-12 py-3.5 bg-slate-100 border-none rounded-2xl focus:ring-2 focus:ring-blue-500/20 font-bold" />
+                <button type="submit" disabled={!input.trim() || isTyping} className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md">
                   <Send size={16} />
                 </button>
               </form>
@@ -294,22 +231,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         </div>
       )}
 
-      {/* Toggle Button */}
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-16 h-16 rounded-[24px] shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 group relative overflow-hidden ${
-          isOpen ? 'bg-slate-900 rotate-90' : 'blue-btn shadow-blue-400/30'
-        }`}
-      >
-        {!isOpen && (
-          <div className="absolute -top-1 -right-1 z-10">
-            <div className="w-5 h-5 bg-emerald-500 rounded-full border-4 border-white"></div>
-            <div className="absolute -inset-1 bg-emerald-500 rounded-full opacity-50 animate-ping"></div>
-          </div>
-        )}
-        {isOpen ? <X size={24} className="text-white" /> : (
-          <img src={AI_AVATAR_URL} alt="Joy" className="w-full h-full object-cover scale-110" />
-        )}
+      <button onClick={() => setIsOpen(!isOpen)} className={`w-16 h-16 rounded-[24px] shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 group relative overflow-hidden ${isOpen ? 'bg-slate-900' : 'blue-btn'}`}>
+        {isOpen ? <X size={24} className="text-white" /> : <img src={AI_AVATAR_URL} alt="Joy" className="w-full h-full object-cover scale-110" />}
       </button>
     </div>
   );

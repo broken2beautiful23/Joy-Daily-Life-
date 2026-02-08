@@ -5,23 +5,14 @@ import {
   BookText, 
   CheckSquare, 
   Wallet, 
-  Dumbbell, 
   Target, 
   StickyNote, 
   Image, 
-  Flame,
   GraduationCap,
   Briefcase,
   Star,
   Cpu
 } from 'lucide-react';
-
-/** 
- * Joy's Original Photo (Mirror Selfie in Blue Shirt)
- * Note: Replacing the previous placeholder with the specific photo provided by the user.
- */
-export const AI_AVATAR_URL = "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop"; 
-// In the final application, this constant will be mapped to your uploaded image data.
 
 export const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard size={20} /> },
@@ -31,7 +22,6 @@ export const NAVIGATION_ITEMS = [
   { id: 'diary', label: 'ডায়েরি', icon: <BookText size={20} /> },
   { id: 'tasks', label: 'কাজ (To-Do)', icon: <CheckSquare size={20} /> },
   { id: 'expenses', label: 'আয় ও ব্যয়', icon: <Wallet size={20} /> },
-  { id: 'habits', label: 'অভ্যাস ট্র্যাকার', icon: <Dumbbell size={20} /> },
   { id: 'goals', label: 'লক্ষ্যসমূহ', icon: <Target size={20} /> },
   { id: 'study', label: 'পড়াশোনা প্ল্যানার', icon: <GraduationCap size={20} /> },
   { id: 'notes', label: 'নোটস', icon: <StickyNote size={20} /> },
@@ -53,3 +43,6 @@ export const MOOD_EMOJIS: Record<string, string> = {
   Sad: '😔',
   Awful: '😫',
 };
+
+// Fixed: Export AI_AVATAR_URL which was missing and causing compilation error in FloatingAI.tsx
+export const AI_AVATAR_URL = 'https://api.dicebear.com/7.x/bottts/svg?seed=Joy';

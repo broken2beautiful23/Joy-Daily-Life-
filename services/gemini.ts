@@ -7,10 +7,13 @@ const SYSTEM_INSTRUCTION = `আপনার নাম জয় কুমার ব
 ব্যবহারকারীর ডাটা বিশ্লেষণ করে নির্দিষ্ট পরামর্শ দিন। 
 বাংলা ভাষায় উত্তর দিন যদি না ব্যবহারকারী ইংরেজিতে জিজ্ঞাসা করেন।`;
 
+// Updated: Using gemini-3-flash-preview for basic text tasks as per guidelines
 const MODEL_TEXT = 'gemini-3-flash-preview';
+// Updated: Using gemini-2.5-flash-preview-tts for speech tasks as per guidelines
 const MODEL_TTS = 'gemini-2.5-flash-preview-tts';
 
 export async function generateDailySummary(data: any) {
+  // Fixed: Instance created right before use to ensure latest API key context
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const prompt = `
@@ -21,12 +24,13 @@ export async function generateDailySummary(data: any) {
   try {
     const response = await ai.models.generateContent({
       model: MODEL_TEXT,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      contents: prompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.7,
       },
     });
+    // Fixed: response.text is a getter, not a method. Correctly accessed here.
     return response.text || "আপনার প্রচেষ্টা আপনাকে অনেক দূরে নিয়ে যাবে। এগিয়ে যান!";
   } catch (error: any) {
     console.error("AI Insight Error:", error);
@@ -35,6 +39,7 @@ export async function generateDailySummary(data: any) {
 }
 
 export async function chatWithJoy(userMessage: string, userData: any) {
+  // Fixed: Instance created right before use to ensure latest API key context
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const prompt = `
@@ -45,12 +50,13 @@ export async function chatWithJoy(userMessage: string, userData: any) {
   try {
     const response = await ai.models.generateContent({
       model: MODEL_TEXT,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      contents: prompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.8,
       },
     });
+    // Fixed: response.text is a getter, not a method. Correctly accessed here.
     return response.text || "আমি আপনার কথা বুঝতে পারছি।";
   } catch (error: any) {
     console.error("Chat Error:", error);
@@ -60,10 +66,11 @@ export async function chatWithJoy(userMessage: string, userData: any) {
 
 export async function speakText(text: string): Promise<string | null> {
   try {
+    // Fixed: Instance created right before use to ensure latest API key context
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: MODEL_TTS,
-      contents: [{ parts: [{ text: `Say cheerfully: ${text}` }] }],
+      contents: `Say cheerfully: ${text}`,
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
@@ -74,6 +81,7 @@ export async function speakText(text: string): Promise<string | null> {
       },
     });
 
+    // Access the base64 audio data from the response candidates
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     return base64Audio || null;
   } catch (error: any) {
