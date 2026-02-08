@@ -1,0 +1,156 @@
+
+import React, { useState, useEffect } from 'react';
+import { Task } from '../types';
+import { Plus, Check, Trash2, Calendar, Flag, Hash, Loader2 } from 'lucide-react';
+import { supabase } from '../services/supabase';
+
+const Tasks: React.FC = () => {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTask, setNewTask] = useState('');
+  const [category, setCategory] = useState<Task['category']>('Personal');
+  const [priority, setPriority] = useState<Task['priority']>('Medium');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const categoryTranslations = { Work: 'কাজ', Personal: 'ব্যক্তিগত', Study: 'পড়াশোনা', Health: 'স্বাস্থ্য' };
+  const priorityTranslations = { Low: 'নিম্ন', Medium: 'মাঝারি', High: 'উচ্চ' };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .order('id', { ascending: false });
+    
+    if (!error && data) {
+      setTasks(data);
+    }
+    setIsLoading(false);
+  };
+
+  const addTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTask.trim()) return;
+    
+    const task: Task = { 
+      id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
+      text: newTask, 
+      completed: false, 
+      category, 
+      priority 
+    };
+
+    const { error } = await supabase
+      .from('tasks')
+      .insert([task]);
+
+    if (!error) {
+      setTasks(prev => [task, ...prev]);
+      setNewTask('');
+    }
+  };
+
+  const toggleTask = async (id: string, currentStatus: boolean) => {
+    const { error } = await supabase
+      .from('tasks')
+      .update({ completed: !currentStatus })
+      .eq('id', id);
+
+    if (!error) {
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !currentStatus } : t));
+    }
+  };
+
+  const deleteTask = async (id: string) => {
+    if (window.confirm('এই কাজটি কি চিরতরে মুছে ফেলতে চান?')) {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', id);
+
+      if (!error) {
+        setTasks(prev => prev.filter(t => t.id !== id));
+      }
+    }
+  };
+
+  const pendingCount = tasks.filter(t => !t.completed).length;
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-8">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-800 tracking-tight">টাস্ক ম্যানেজার</h2>
+          <p className="text-slate-500 font-medium">আপনার আজকের {pendingCount}টি কাজ বাকি আছে।</p>
+        </div>
+        <div className="flex items-center gap-2 bg-indigo-50 text-indigo-700 font-bold px-4 py-2 rounded-xl border border-indigo-100">
+          <Calendar size={18} />
+          <span>আজ</span>
+        </div>
+      </header>
+
+      <form onSubmit={addTask} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
+        <div className="flex gap-4">
+          <input type="text" value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="নতুন কাজ লিখুন..." className="flex-1 text-lg border-none focus:ring-0 outline-none font-bold text-slate-700" autoFocus />
+          <button type="submit" className="bg-indigo-600 text-white p-3 rounded-xl shadow-lg hover:bg-indigo-700 transition-all active:scale-95"><Plus /></button>
+        </div>
+        <div className="flex flex-wrap gap-4 pt-4 border-t border-slate-50">
+          <div className="flex items-center gap-2">
+            <Hash size={16} className="text-slate-400" />
+            <select value={category} onChange={(e) => setCategory(e.target.value as any)} className="text-sm font-semibold text-slate-600 bg-slate-50 border-none rounded-lg px-3 py-1 outline-none">
+              <option value="Work">কাজ</option>
+              <option value="Personal">ব্যক্তিগত</option>
+              <option value="Study">পড়াশোনা</option>
+              <option value="Health">স্বাস্থ্য</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Flag size={16} className="text-slate-400" />
+            <select value={priority} onChange={(e) => setPriority(e.target.value as any)} className="text-sm font-semibold text-slate-600 bg-slate-50 border-none rounded-lg px-3 py-1 outline-none">
+              <option value="Medium">মাঝারি</option>
+              <option value="Low">নিম্ন</option>
+              <option value="High">উচ্চ</option>
+            </select>
+          </div>
+        </div>
+      </form>
+
+      {isLoading ? (
+        <div className="flex flex-col items-center py-20 gap-4">
+          <Loader2 className="animate-spin text-indigo-600" size={40} />
+          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Supabase থেকে টাস্ক লোড হচ্ছে...</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {tasks.sort((a,b) => a.completed === b.completed ? 0 : a.completed ? 1 : -1).map((task) => (
+            <div key={task.id} className={`flex items-center gap-4 p-5 rounded-2xl bg-white border border-slate-100 transition-all group ${task.completed ? 'opacity-50 grayscale shadow-none' : 'shadow-sm hover:shadow-md'}`}>
+              <button onClick={() => toggleTask(task.id, task.completed)} className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all ${task.completed ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 hover:border-indigo-400'}`}>
+                {task.completed && <Check size={16} strokeWidth={4} />}
+              </button>
+              <div className="flex-1">
+                <h4 className={`font-semibold text-slate-800 ${task.completed ? 'line-through text-slate-400' : ''}`}>{task.text}</h4>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-400">খাত: {categoryTranslations[task.category as keyof typeof categoryTranslations] || task.category}</span>
+                  <span className={`text-[10px] uppercase font-bold ${task.priority === 'High' ? 'text-red-500' : 'text-slate-400'}`}>• {priorityTranslations[task.priority as keyof typeof priorityTranslations] || task.priority} গুরুত্ব</span>
+                </div>
+              </div>
+              <button onClick={() => deleteTask(task.id)} className="p-3 text-slate-300 hover:text-red-500 opacity-100 transition-opacity">
+                <Trash2 size={20} />
+              </button>
+            </div>
+          ))}
+          {tasks.length === 0 && (
+            <div className="py-20 text-center">
+              <p className="text-slate-300 font-medium italic text-lg">"শুরু করাই হলো এগিয়ে যাওয়ার মূল রহস্য।"</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Tasks;
