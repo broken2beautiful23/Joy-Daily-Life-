@@ -7,10 +7,11 @@ const SYSTEM_INSTRUCTION = `আপনার নাম জয় কুমার ব
 ব্যবহারকারীর ডাটা বিশ্লেষণ করে নির্দিষ্ট পরামর্শ দিন। 
 বাংলা ভাষায় উত্তর দিন যদি না ব্যবহারকারী ইংরেজিতে জিজ্ঞাসা করেন।`;
 
+const MODEL_TEXT = 'gemini-3-flash-preview';
+const MODEL_TTS = 'gemini-2.5-flash-preview-tts';
+
 export async function generateDailySummary(data: any) {
-  // Always initialize right before use to catch the latest API Key
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const model = 'gemini-3-flash-preview';
   
   const prompt = `
     নিচের ডাটা বিশ্লেষণ করে ব্যবহারকারীর দিনের একটি মোটিভেশনাল সামারি দিন এবং আগামীকালের জন্য পরামর্শ দিন:
@@ -19,7 +20,7 @@ export async function generateDailySummary(data: any) {
 
   try {
     const response = await ai.models.generateContent({
-      model,
+      model: MODEL_TEXT,
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
@@ -27,16 +28,14 @@ export async function generateDailySummary(data: any) {
       },
     });
     return response.text || "আপনার প্রচেষ্টা আপনাকে অনেক দূরে নিয়ে যাবে। এগিয়ে যান!";
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Insight Error:", error);
-    return "আপনার আজকের যাত্রা চমৎকার হোক!";
+    throw error;
   }
 }
 
 export async function chatWithJoy(userMessage: string, userData: any) {
-  // Always initialize right before use to catch the latest API Key
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const model = 'gemini-3-flash-preview';
 
   const prompt = `
     ব্যবহারকারীর বর্তমান অবস্থা: ${JSON.stringify(userData)}
@@ -45,7 +44,7 @@ export async function chatWithJoy(userMessage: string, userData: any) {
 
   try {
     const response = await ai.models.generateContent({
-      model,
+      model: MODEL_TEXT,
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
@@ -53,7 +52,7 @@ export async function chatWithJoy(userMessage: string, userData: any) {
       },
     });
     return response.text || "আমি আপনার কথা বুঝতে পারছি।";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Chat Error:", error);
     throw error;
   }
@@ -61,10 +60,9 @@ export async function chatWithJoy(userMessage: string, userData: any) {
 
 export async function speakText(text: string): Promise<string | null> {
   try {
-    // Always initialize right before use to catch the latest API Key
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
+      model: MODEL_TTS,
       contents: [{ parts: [{ text: `Say cheerfully: ${text}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
@@ -78,7 +76,7 @@ export async function speakText(text: string): Promise<string | null> {
 
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     return base64Audio || null;
-  } catch (error) {
+  } catch (error: any) {
     console.error("TTS Error:", error);
     return null;
   }

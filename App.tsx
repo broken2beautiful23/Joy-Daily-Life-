@@ -19,7 +19,7 @@ import { supabase } from './services/supabase';
 import { 
   Lock, LogOut, Menu, X, Sparkles, Mail, 
   ArrowRight, ShieldCheck, RefreshCw, 
-  User, Palette, Loader2, Eye, EyeOff, Key
+  User, Palette, Loader2, Eye, EyeOff, Key, ExternalLink
 } from 'lucide-react';
 
 type AppTheme = 'blue' | 'rose' | 'emerald' | 'dark';
@@ -54,7 +54,10 @@ const App: React.FC = () => {
         setHasApiKey(has);
       }
     };
+    
     checkApiKey();
+    // Re-check periodically or set up an interval if needed
+    const interval = setInterval(checkApiKey, 5000);
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -83,14 +86,16 @@ const App: React.FC = () => {
       document.body.className = savedTheme;
     }
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
 
   const handleSelectKey = async () => {
     if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
       try {
         await window.aistudio.openSelectKey();
-        // GUIDELINE: Assume selection was successful to mitigate race condition
         setHasApiKey(true);
       } catch (e) {
         console.error("Key selection failed", e);
@@ -419,9 +424,14 @@ const App: React.FC = () => {
 
           <div className="flex items-center gap-4">
              {!hasApiKey && (
-               <button onClick={handleSelectKey} className="flex items-center gap-2 bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg border border-amber-500 animate-pulse hover:scale-105 transition-all">
-                 <Key size={14} /> <span>এপিআই কী সিলেক্ট করুন</span>
-               </button>
+               <div className="flex flex-col items-end gap-1">
+                 <button onClick={handleSelectKey} className="flex items-center gap-2 bg-amber-600 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-xl border border-amber-500 animate-pulse hover:scale-105 transition-all">
+                   <Key size={14} /> <span>এপিআই কী সিলেক্ট করুন</span>
+                 </button>
+                 <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="text-[8px] font-bold text-amber-600 underline flex items-center gap-1">
+                   পেইড প্রজেক্ট প্রয়োজন <ExternalLink size={8} />
+                 </a>
+               </div>
              )}
              <div className="flex gap-1 bg-white p-1 rounded-xl border border-blue-50">
                 {(['blue', 'rose', 'emerald', 'dark'] as AppTheme[]).map(th => (
