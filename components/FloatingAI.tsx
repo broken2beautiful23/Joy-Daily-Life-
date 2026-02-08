@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Send, X, UserCheck, Loader2, Sparkles, Minimize2 } from 'lucide-react';
+import { MessageSquare, Send, X, UserCheck, Loader2, Sparkles, Minimize2, AlertCircle } from 'lucide-react';
 import { chatWithJoy } from '../services/gemini';
 import { translations, Language } from '../translations';
 
@@ -14,6 +14,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{role: 'user' | 'joy', text: string}[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const t = translations[lang];
 
@@ -29,14 +30,21 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
     const userMsg = input.trim();
     setInput('');
+    setError(null);
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setIsTyping(true);
 
     try {
       const response = await chatWithJoy(userMsg, { userName });
-      setMessages(prev => [...prev, { role: 'joy', text: response || "আমি আপনার কথা বুঝতে পেরেছি।" }]);
+      if (response) {
+        setMessages(prev => [...prev, { role: 'joy', text: response }]);
+      } else {
+        throw new Error("No response from AI");
+      }
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'joy', text: "দুঃখিত, বর্তমানে আমার সার্ভারে সমস্যা হচ্ছে।" }]);
+      console.error("Chat Error:", error);
+      setError(lang === 'bn' ? "কানেকশনে সমস্যা হচ্ছে।" : "Connection problem.");
+      setMessages(prev => [...prev, { role: 'joy', text: "দুঃখিত, আমার সার্ভারে বর্তমানে সমস্যা হচ্ছে। দয়া করে একটু পর আবার চেষ্টা করুন।" }]);
     } finally {
       setIsTyping(false);
     }
@@ -92,6 +100,13 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                     <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
                     <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
                   </div>
+                </div>
+              </div>
+            )}
+            {error && (
+              <div className="flex justify-center">
+                <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-500 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                  <AlertCircle size={12} /> {error}
                 </div>
               </div>
             )}
