@@ -13,6 +13,7 @@ import MemoryGallery from './components/MemoryGallery';
 import WorkLog from './components/WorkLog';
 import MotivationalStories from './components/MotivationalStories';
 import ProfessionalWork from './components/ProfessionalWork';
+import FloatingAI from './components/FloatingAI';
 import { translations, Language } from './translations';
 import { supabase } from './services/supabase';
 import { 
@@ -30,6 +31,7 @@ const App: React.FC = () => {
   const [lang, setLang] = useState<Language>('bn');
   const [theme, setTheme] = useState<AppTheme>('blue');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const t = translations[lang];
 
   // Auth Form State
@@ -45,19 +47,21 @@ const App: React.FC = () => {
   const [userName, setUserName] = useState('ইউজার');
 
   useEffect(() => {
-    // Initial check for active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setIsAuthenticated(true);
+        setUserId(session.user.id);
         setUserName(session.user.email?.split('@')[0] || 'User');
       }
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session);
       if (session) {
+        setUserId(session.user.id);
         setUserName(session.user.email?.split('@')[0] || 'User');
+      } else {
+        setUserId(null);
       }
     });
 
@@ -116,10 +120,9 @@ const App: React.FC = () => {
         if (error) throw error;
 
         if (data.session) {
-          // Case 1: Session returned immediately (Auto-confirm is ON)
           setIsAuthenticated(true);
+          setUserId(data.session.user.id);
         } else if (data.user) {
-          // Case 2: User created but session null (Confirmation required)
           setAuthStage('verification');
           alert(lang === 'bn' ? "আপনার ইমেলে একটি ভেরিফিকেশন কোড পাঠানো হয়েছে।" : "A verification code has been sent to your email.");
         }
@@ -138,10 +141,10 @@ const App: React.FC = () => {
           }
         } else if (data.session) {
           setIsAuthenticated(true);
+          setUserId(data.session.user.id);
         }
       }
     } catch (err: any) {
-      console.error("Auth Error:", err);
       alert(lang === 'bn' ? `ত্রুটি: ${err.message}` : `Error: ${err.message}`);
     } finally {
       setIsAuthLoading(false);
@@ -165,6 +168,7 @@ const App: React.FC = () => {
 
       if (data.session) {
         setIsAuthenticated(true);
+        setUserId(data.session.user.id);
         setAuthStage('credentials');
       }
     } catch (err: any) {
@@ -179,10 +183,11 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsAuthenticated(false);
+    setUserId(null);
     setActiveTab('dashboard');
   };
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !userId) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-slate-950' : 'bg-blue-50'} p-4 font-sans`}>
         <div className="bg-white/90 backdrop-blur-3xl rounded-[48px] shadow-2xl p-10 w-full max-w-lg animate-in fade-in zoom-in duration-500 border border-white/50 relative z-10">
@@ -417,26 +422,29 @@ const App: React.FC = () => {
         <div className="flex-1 p-8 lg:p-12">
           <div className="max-w-7xl mx-auto pb-24">
             {(() => {
-              const props = { lang, userName };
+              const props = { lang, userName, userId };
               switch (activeTab) {
                 case 'dashboard': return <Dashboard {...props} />;
-                case 'profwork': return <ProfessionalWork lang={lang} />;
-                case 'worklog': return <WorkLog lang={lang} />;
+                case 'profwork': return <ProfessionalWork {...props} />;
+                case 'worklog': return <WorkLog {...props} />;
                 case 'stories': return <MotivationalStories lang={lang} onNavigate={setActiveTab} />;
-                case 'diary': return <Diary />;
-                case 'tasks': return <Tasks />;
-                case 'expenses': return <Expenses lang={lang} />;
-                case 'habits': return <HabitTracker />;
-                case 'goals': return <Goals />;
-                case 'study': return <StudyPlanner />;
-                case 'notes': return <Notes />;
-                case 'memories': return <MemoryGallery />;
+                case 'diary': return <Diary userId={userId} />;
+                case 'tasks': return <Tasks userId={userId} />;
+                case 'expenses': return <Expenses {...props} />;
+                case 'habits': return <HabitTracker userId={userId} />;
+                case 'goals': return <Goals userId={userId} />;
+                case 'study': return <StudyPlanner userId={userId} />;
+                case 'notes': return <Notes userId={userId} />;
+                case 'memories': return <MemoryGallery userId={userId} />;
                 default: return <Dashboard {...props} />;
               }
             })()}
           </div>
         </div>
       </main>
+
+      {/* Global Floating AI Assistant */}
+      <FloatingAI lang={lang} userName={userName} />
     </div>
   );
 };

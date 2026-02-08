@@ -5,7 +5,11 @@ import { Mood, DiaryEntry } from '../types';
 import { Plus, Search, Calendar as CalendarIcon, Star, Trash2, X, BookText, Loader2 } from 'lucide-react';
 import { supabase } from '../services/supabase';
 
-const Diary: React.FC = () => {
+interface DiaryProps {
+  userId: string;
+}
+
+const Diary: React.FC<DiaryProps> = ({ userId }) => {
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [newContent, setNewContent] = useState('');
@@ -22,14 +26,15 @@ const Diary: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchEntries();
-  }, []);
+    if (userId) fetchEntries();
+  }, [userId]);
 
   const fetchEntries = async () => {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('diary_entries')
       .select('*')
+      .eq('user_id', userId)
       .order('date', { ascending: false });
     
     if (!error && data) {
@@ -39,10 +44,11 @@ const Diary: React.FC = () => {
   };
 
   const addEntry = async () => {
-    if (!newContent.trim()) return;
+    if (!newContent.trim() || !userId) return;
     
     const newEntry = {
       id: Date.now().toString(),
+      user_id: userId,
       date: new Date().toISOString(),
       mood: selectedMood,
       content: newContent,
@@ -58,7 +64,7 @@ const Diary: React.FC = () => {
       setNewContent('');
       setIsAdding(false);
     } else {
-      alert('ডাটা সেভ করতে সমস্যা হয়েছে। দয়া করে টেবিল চেক করুন।');
+      alert('ডাটা সেভ করতে সমস্যা হয়েছে।');
     }
   };
 
@@ -67,7 +73,8 @@ const Diary: React.FC = () => {
       const { error } = await supabase
         .from('diary_entries')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', userId);
 
       if (!error) {
         setEntries(entries.filter(e => e.id !== id));
@@ -117,7 +124,7 @@ const Diary: React.FC = () => {
       {isLoading ? (
         <div className="flex flex-col items-center py-20 gap-4">
           <Loader2 className="animate-spin text-indigo-600" size={40} />
-          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Supabase থেকে ডাটা আসছে...</p>
+          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">ডাটা লোড হচ্ছে...</p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -131,7 +138,7 @@ const Diary: React.FC = () => {
                     <p className="text-xs text-slate-400 flex items-center gap-1"><CalendarIcon size={12} /> {new Date(entry.date).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                 </div>
-                <div className="flex gap-2 opacity-100 transition-opacity">
+                <div className="flex gap-2">
                   <button onClick={() => deleteEntry(entry.id)} className="p-2 text-slate-400 hover:text-red-500" title="মুছে ফেলুন">
                     <Trash2 size={20} />
                   </button>
