@@ -25,6 +25,7 @@ const WorkLog: React.FC<WorkLogProps> = ({ lang, userId }) => {
   const [hours, setHours] = useState('');
   const [learning, setLearning] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const t = translations[lang];
 
   useEffect(() => {
@@ -33,32 +34,53 @@ const WorkLog: React.FC<WorkLogProps> = ({ lang, userId }) => {
 
   const fetchLogs = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('work_logs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('date', { ascending: false });
-    if (!error && data) setLogs(data);
-    setIsLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from('work_logs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false });
+      if (!error && data) setLogs(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const addLog = async () => {
-    if (!title || !hours || !userId) return;
-    const newLog = {
-      id: `log-${Date.now()}`,
-      user_id: userId,
-      date: new Date().toISOString(),
-      title,
-      hours: parseFloat(hours),
-      learning
-    };
-    const { error } = await supabase.from('work_logs').insert([newLog]);
-    if (!error) {
-      setLogs([newLog as any, ...logs]);
-      setTitle('');
-      setHours('');
-      setLearning('');
-      setShowAdd(false);
+    if (!title || !hours || !userId) {
+      alert(lang === 'bn' ? "দয়া করে সব তথ্য পূরণ করুন!" : "Please fill all fields!");
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from('work_logs')
+        .insert([{
+          user_id: userId,
+          date: new Date().toISOString(),
+          title,
+          hours: parseFloat(hours),
+          learning
+        }])
+        .select();
+
+      if (error) throw error;
+
+      if (data) {
+        setLogs([data[0], ...logs]);
+        setTitle('');
+        setHours('');
+        setLearning('');
+        setShowAdd(false);
+        alert(lang === 'bn' ? "সফলভাবে যোগ করা হয়েছে!" : "Logged successfully!");
+      }
+    } catch (err: any) {
+      alert(lang === 'bn' ? `ত্রুটি: ${err.message}` : `Error: ${err.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -149,8 +171,13 @@ const WorkLog: React.FC<WorkLogProps> = ({ lang, userId }) => {
                 className="w-full bg-blue-50/50 border border-blue-100 rounded-2xl py-5 px-6 font-bold h-32 resize-none"
                 placeholder={lang === 'bn' ? "নতুন কি শিখলেন?" : "What new thing did you learn?"}
               />
-              <button onClick={addLog} className="w-full blue-btn text-white font-black py-5 rounded-[24px] shadow-2xl">
-                {t.save}
+              <button 
+                onClick={addLog} 
+                disabled={isSaving}
+                className="w-full blue-btn text-white font-black py-5 rounded-[24px] shadow-2xl disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isSaving && <Loader2 className="animate-spin" size={20} />}
+                {isSaving ? (lang === 'bn' ? 'সেভ হচ্ছে...' : 'Saving...') : t.save}
               </button>
             </div>
           </div>
@@ -175,7 +202,7 @@ const WorkLog: React.FC<WorkLogProps> = ({ lang, userId }) => {
               </div>
             </div>
           ))}
-          {!isLoading && logs.length === 0 && <div className="p-20 text-center text-slate-300 italic">কোনো কাজের লগ নেই</div>}
+          {!isLoading && logs.length === 0 && <div className="p-20 text-center text-slate-300 italic font-bold">কোনো কাজের লগ নেই</div>}
         </div>
       </div>
     </div>

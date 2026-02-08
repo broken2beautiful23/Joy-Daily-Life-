@@ -12,6 +12,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ userId }) => {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [newHabitName, setNewHabitName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const today = new Date();
   const days = Array.from({length: 7}).map((_, i) => {
@@ -28,28 +29,43 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ userId }) => {
 
   const fetchHabits = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('habits')
-      .select('*')
-      .eq('user_id', userId);
-    if (!error && data) setHabits(data);
-    setIsLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from('habits')
+        .select('*')
+        .eq('user_id', userId);
+      if (!error && data) setHabits(data);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const addHabit = async () => {
     if (!newHabitName.trim() || !userId) return;
-    const newHabit = { 
-      id: `habit-${Date.now()}`, 
-      user_id: userId,
-      name: newHabitName, 
-      completedDates: [], 
-      streak: 0, 
-      targetPerWeek: 7 
-    };
-    const { error } = await supabase.from('habits').insert([newHabit]);
-    if (!error) {
-      setHabits([...habits, newHabit as any]);
-      setNewHabitName('');
+    
+    setIsSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from('habits')
+        .insert([{ 
+          user_id: userId,
+          name: newHabitName, 
+          completedDates: [], 
+          streak: 0, 
+          targetPerWeek: 7 
+        }])
+        .select();
+
+      if (error) throw error;
+
+      if (data) {
+        setHabits([...habits, data[0]]);
+        setNewHabitName('');
+      }
+    } catch (err: any) {
+      alert(`ত্রুটি: ${err.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -67,6 +83,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ userId }) => {
       .update({ completedDates: newDates })
       .eq('id', habitId)
       .eq('user_id', userId);
+    
     if (!error) {
       setHabits(habits.map(h => h.id === habitId ? { ...h, completedDates: newDates } : h));
     }
@@ -91,8 +108,20 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ userId }) => {
           {isLoading && <Loader2 className="animate-spin text-indigo-500 mt-2" size={16} />}
         </div>
         <div className="flex gap-2">
-          <input type="text" value={newHabitName} onChange={(e) => setNewHabitName(e.target.value)} placeholder="নতুন অভ্যাসের নাম..." className="bg-white border border-slate-200 px-4 py-3 rounded-xl outline-none font-bold" />
-          <button onClick={addHabit} className="bg-indigo-600 text-white p-3 rounded-xl shadow-md active:scale-95 transition-all"><Plus /></button>
+          <input 
+            type="text" 
+            value={newHabitName} 
+            onChange={(e) => setNewHabitName(e.target.value)} 
+            placeholder="নতুন অভ্যাসের নাম..." 
+            className="bg-white border border-slate-200 px-4 py-3 rounded-xl outline-none font-bold" 
+          />
+          <button 
+            onClick={addHabit} 
+            disabled={isSaving}
+            className="bg-indigo-600 text-white p-3 rounded-xl shadow-md active:scale-95 transition-all disabled:opacity-50"
+          >
+            {isSaving ? <Loader2 className="animate-spin" size={24} /> : <Plus />}
+          </button>
         </div>
       </header>
 

@@ -14,6 +14,7 @@ const Notes: React.FC<NotesProps> = ({ userId }) => {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (userId) fetchNotes();
@@ -21,28 +22,43 @@ const Notes: React.FC<NotesProps> = ({ userId }) => {
 
   const fetchNotes = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('notes')
-      .select('*')
-      .eq('user_id', userId)
-      .order('updatedAt', { ascending: false });
-    if (!error && data) setNotes(data);
-    setIsLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', userId)
+        .order('updatedAt', { ascending: false });
+      if (!error && data) setNotes(data);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const createNote = async () => {
     if (!userId) return;
-    const newNote = { 
-      id: `note-${Date.now()}`, 
-      user_id: userId,
-      title: 'নতুন নোট', 
-      content: '', 
-      updatedAt: new Date().toISOString() 
-    };
-    const { error } = await supabase.from('notes').insert([newNote]);
-    if (!error) {
-      setNotes([newNote as any, ...notes]);
-      startEditing(newNote as any);
+    
+    setIsSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .insert([{ 
+          user_id: userId,
+          title: 'নতুন নোট', 
+          content: '', 
+          updatedAt: new Date().toISOString() 
+        }])
+        .select();
+
+      if (error) throw error;
+
+      if (data) {
+        setNotes([data[0], ...notes]);
+        startEditing(data[0]);
+      }
+    } catch (err: any) {
+      alert(`ত্রুটি: ${err.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -55,6 +71,7 @@ const Notes: React.FC<NotesProps> = ({ userId }) => {
   const saveEdit = async () => {
     if (!editingId || !userId) return;
     const updatedAt = new Date().toISOString();
+    
     const { error } = await supabase
       .from('notes')
       .update({ 
@@ -68,6 +85,8 @@ const Notes: React.FC<NotesProps> = ({ userId }) => {
     if (!error) {
       setNotes(notes.map(n => n.id === editingId ? { ...n, title: editTitle, content: editContent, updatedAt } : n));
       setEditingId(null);
+    } else {
+      alert("সেভ করতে সমস্যা হয়েছে।");
     }
   };
 
@@ -87,9 +106,9 @@ const Notes: React.FC<NotesProps> = ({ userId }) => {
       <header className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold text-slate-800">নোটস</h2>
-          {isLoading && <Loader2 className="animate-spin text-indigo-500 mt-2" size={16} />}
+          {(isLoading || isSaving) && <Loader2 className="animate-spin text-indigo-500 mt-2" size={16} />}
         </div>
-        <button onClick={createNote} className="bg-indigo-600 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg">
+        <button onClick={createNote} disabled={isSaving} className="bg-indigo-600 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:bg-indigo-700 disabled:opacity-50">
           <Plus size={20} />
           <span>নতুন নোট</span>
         </button>

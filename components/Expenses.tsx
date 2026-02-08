@@ -46,7 +46,7 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
       if (error) throw error;
       if (data) setTransactions(data);
     } catch (err: any) {
-      console.error(err.message);
+      console.error("Fetch Error:", err.message);
     } finally {
       setIsLoading(false);
     }
@@ -54,16 +54,17 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
 
   const addTransaction = async () => {
     if (!amount || parseFloat(amount) <= 0) {
-      alert("সঠিক পরিমাণ দিন!");
+      alert(lang === 'bn' ? "সঠিক পরিমাণ দিন!" : "Please enter a valid amount!");
       return;
     }
     if (!userId) {
-      alert("সেশন পাওয়া যায়নি।");
+      alert("Session expired. Please log in again.");
       return;
     }
     
     setIsSaving(true);
     try {
+      // CRITICAL: We do NOT send the 'id' field. DB handles it.
       const { data, error } = await supabase
         .from('transactions')
         .insert([{ 
@@ -83,22 +84,22 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
         setAmount('');
         setNote('');
         setShowAdd(false);
-        alert("লেনদেন সেভ হয়েছে!");
+        alert(lang === 'bn' ? "লেনদেন সফলভাবে সেভ হয়েছে!" : "Transaction saved successfully!");
       }
     } catch (err: any) {
-      alert(`ত্রুটি: ${err.message}`);
+      alert(lang === 'bn' ? `ত্রুটি: ${err.message}` : `Error: ${err.message}`);
     } finally {
       setIsSaving(false);
     }
   };
 
   const deleteTransaction = async (id: string) => {
-    if (window.confirm(lang === 'bn' ? 'মুছে ফেলতে চান?' : 'Delete?')) {
+    if (window.confirm(lang === 'bn' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?')) {
       const { error } = await supabase.from('transactions').delete().eq('id', id).eq('user_id', userId);
       if (!error) {
         setTransactions(transactions.filter(t => t.id !== id));
       } else {
-        alert("মুছতে ব্যর্থ হয়েছে।");
+        alert("Failed to delete.");
       }
     }
   };
@@ -169,22 +170,22 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
             <div className="space-y-4">
               <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-5 font-bold text-lg" placeholder="0.00" />
               <div className="flex gap-2">
-                 <button onClick={() => setType('income')} className={`flex-1 py-2 rounded-xl font-bold ${type === 'income' ? 'bg-emerald-600 text-white' : 'bg-slate-100'}`}>আয়</button>
-                 <button onClick={() => setType('expense')} className={`flex-1 py-2 rounded-xl font-bold ${type === 'expense' ? 'bg-rose-600 text-white' : 'bg-slate-100'}`}>ব্যয়</button>
+                 <button onClick={() => setType('income')} className={`flex-1 py-2 rounded-xl font-bold transition-all ${type === 'income' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{lang === 'bn' ? 'আয়' : 'Income'}</button>
+                 <button onClick={() => setType('expense')} className={`flex-1 py-2 rounded-xl font-bold transition-all ${type === 'expense' ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{lang === 'bn' ? 'ব্যয়' : 'Expense'}</button>
               </div>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-5 font-bold">
                 {categories[type].map(c => (
                   <option key={c} value={c}>{lang === 'bn' ? catTranslations[c] || c : c}</option>
                 ))}
               </select>
-              <input type="text" value={note} onChange={(e) => setNote(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-5 font-medium" placeholder="নোট লিখুন..." />
+              <input type="text" value={note} onChange={(e) => setNote(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-5 font-medium" placeholder={lang === 'bn' ? "নোট লিখুন..." : "Enter note..."} />
               <button 
                 onClick={addTransaction} 
                 disabled={isSaving}
-                className={`w-full text-white font-black py-5 rounded-2xl flex items-center justify-center gap-2 ${type === 'income' ? 'bg-emerald-600' : 'bg-rose-600'} disabled:opacity-50`}
+                className={`w-full text-white font-black py-5 rounded-2xl flex items-center justify-center gap-2 ${type === 'income' ? 'bg-emerald-600' : 'bg-rose-600'} shadow-lg transition-all active:scale-95 disabled:opacity-50`}
               >
                 {isSaving && <Loader2 className="animate-spin" size={20} />}
-                {t.save_transaction}
+                {isSaving ? (lang === 'bn' ? "সেভ হচ্ছে..." : "Saving...") : t.save_transaction}
               </button>
             </div>
           </div>

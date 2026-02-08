@@ -23,6 +23,7 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ userId }) => {
   const [duration, setDuration] = useState('');
   const [topic, setTopic] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (userId) fetchSessions();
@@ -30,29 +31,49 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ userId }) => {
 
   const fetchSessions = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('study_sessions')
-      .select('*')
-      .eq('user_id', userId);
-    if (!error && data) setSessions(data);
-    setIsLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from('study_sessions')
+        .select('*')
+        .eq('user_id', userId);
+      if (!error && data) setSessions(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const addSession = async () => {
-    if (!subject.trim() || !userId) return;
-    const newSession = {
-      id: `study-${Date.now()}`,
-      user_id: userId,
-      subject,
-      duration: duration || 'অনির্দিষ্ট সময়',
-      topic: topic || 'জেনারেল স্টাডি',
-      done: false
-    };
-    const { error } = await supabase.from('study_sessions').insert([newSession]);
-    if (!error) {
-      setSessions([...sessions, newSession as any]);
-      setSubject(''); setDuration(''); setTopic('');
-      setIsAdding(false);
+    if (!subject.trim() || !userId) {
+      alert("বিষয়ের নাম দিন!");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from('study_sessions')
+        .insert([{
+          user_id: userId,
+          subject,
+          duration: duration || 'অনির্দিষ্ট সময়',
+          topic: topic || 'জেনারেল স্টাডি',
+          done: false
+        }])
+        .select();
+
+      if (error) throw error;
+
+      if (data) {
+        setSessions([...sessions, data[0]]);
+        setSubject(''); setDuration(''); setTopic('');
+        setIsAdding(false);
+      }
+    } catch (err: any) {
+      alert(`ত্রুটি: ${err.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -89,7 +110,7 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ userId }) => {
           <h2 className="text-3xl font-bold text-slate-800">পড়াশোনা প্ল্যানার</h2>
           {isLoading && <Loader2 className="animate-spin text-indigo-500 mt-2" size={16} />}
         </div>
-        <button onClick={() => setIsAdding(!isAdding)} className="bg-indigo-600 text-white px-6 py-3 rounded-xl shadow-lg font-bold flex items-center gap-2">
+        <button onClick={() => setIsAdding(!isAdding)} className="bg-indigo-600 text-white px-6 py-3 rounded-xl shadow-lg font-bold flex items-center gap-2 active:scale-95 transition-all">
            {isAdding ? <X size={20}/> : <Plus size={20} />}
            {isAdding ? 'বাতিল' : 'নতুন সেশন'}
         </button>
@@ -97,12 +118,19 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ userId }) => {
 
       {isAdding && (
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-indigo-100 animate-in slide-in-from-top duration-300 space-y-4">
-          <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="বিষয়ের নাম" className="w-full p-4 bg-slate-50 rounded-xl outline-none font-bold" />
+          <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="বিষয়ের নাম" className="w-full p-4 bg-slate-50 rounded-xl outline-none font-bold focus:bg-white focus:ring-2 focus:ring-indigo-200 transition-all" />
           <div className="grid grid-cols-2 gap-4">
             <input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="সময় (যেমন: ২ ঘণ্টা)" className="p-4 bg-slate-50 rounded-xl outline-none font-bold" />
             <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="টপিক" className="p-4 bg-slate-50 rounded-xl outline-none font-bold" />
           </div>
-          <button onClick={addSession} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl">প্ল্যানে যোগ করুন</button>
+          <button 
+            onClick={addSession} 
+            disabled={isSaving}
+            className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isSaving && <Loader2 className="animate-spin" size={20} />}
+            {isSaving ? 'সেভ হচ্ছে...' : 'প্ল্যানে যোগ করুন'}
+          </button>
         </div>
       )}
 
@@ -132,7 +160,7 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ userId }) => {
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-50">
-          <h3 className="font-bold text-slate-800">আজকের পড়াশোনার পরিকল্পনা</h3>
+          <h3 className="font-bold text-slate-800 uppercase text-xs tracking-widest">আজকের পড়াশোনার পরিকল্পনা</h3>
         </div>
         <div className="divide-y divide-slate-50">
           {sessions.map((session) => (
@@ -149,18 +177,18 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ userId }) => {
               <div className="flex items-center gap-4">
                 <button 
                   onClick={() => toggleDone(session.id, session.done)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${session.done ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-600 text-white shadow-md'}`}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${session.done ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-600 text-white shadow-md active:scale-95'}`}
                 >
                   {session.done ? 'সম্পন্ন' : 'শুরু করুন'}
                 </button>
-                <button onClick={() => deleteSession(session.id)} className="p-2 text-slate-300 hover:text-red-500 opacity-100 transition-opacity">
+                <button onClick={() => deleteSession(session.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
                   <Trash2 size={18} />
                 </button>
               </div>
             </div>
           ))}
           {!isLoading && sessions.length === 0 && (
-            <div className="p-20 text-center text-slate-300 italic">আজকের কোনো পড়ার সেশন নেই।</div>
+            <div className="p-20 text-center text-slate-300 italic font-bold">আজকের কোনো পড়ার সেশন নেই।</div>
           )}
         </div>
       </div>

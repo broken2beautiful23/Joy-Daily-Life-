@@ -23,6 +23,7 @@ const Goals: React.FC<GoalsProps> = ({ userId }) => {
   const [newCategory, setNewCategory] = useState('ব্যক্তিগত');
   const [newTargetDate, setNewTargetDate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (userId) fetchGoals();
@@ -30,29 +31,44 @@ const Goals: React.FC<GoalsProps> = ({ userId }) => {
 
   const fetchGoals = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('joy_goals')
-      .select('*')
-      .eq('user_id', userId);
-    if (!error && data) setGoals(data);
-    setIsLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from('joy_goals')
+        .select('*')
+        .eq('user_id', userId);
+      if (!error && data) setGoals(data);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const addGoal = async () => {
     if (!newTitle.trim() || !userId) return;
-    const goal = {
-      id: `goal-${Date.now()}`,
-      user_id: userId,
-      title: newTitle,
-      category: newCategory,
-      progress: 0,
-      targetDate: newTargetDate || 'অনির্ধারিত'
-    };
-    const { error } = await supabase.from('joy_goals').insert([goal]);
-    if (!error) {
-      setGoals([...goals, goal as any]);
-      setNewTitle('');
-      setIsAdding(false);
+    
+    setIsSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from('joy_goals')
+        .insert([{
+          user_id: userId,
+          title: newTitle,
+          category: newCategory,
+          progress: 0,
+          targetDate: newTargetDate || 'অনির্ধারিত'
+        }])
+        .select();
+
+      if (error) throw error;
+
+      if (data) {
+        setGoals([...goals, data[0]]);
+        setNewTitle('');
+        setIsAdding(false);
+      }
+    } catch (err: any) {
+      alert(`ত্রুটি: ${err.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -61,16 +77,18 @@ const Goals: React.FC<GoalsProps> = ({ userId }) => {
     const newVal = prompt('নতুন প্রগ্রেস লিখুন (০-১০০):', current.toString());
     if (newVal === null) return;
     const progress = Math.min(100, Math.max(0, parseInt(newVal) || 0));
+    
     const { error } = await supabase
       .from('joy_goals')
       .update({ progress })
       .eq('id', id)
       .eq('user_id', userId);
+    
     if (!error) setGoals(goals.map(g => g.id === id ? { ...g, progress } : g));
   };
 
   const deleteGoal = async (id: string) => {
-    if (window.confirm('এই লক্ষ্যটি কি চিরতরে মুছে ফেলতে চান?') && userId) {
+    if (window.confirm('এই লক্ষ্যটি কি চিরতরে মুছে ফেলতে চান?')) {
       const { error } = await supabase
         .from('joy_goals')
         .delete()
@@ -95,17 +113,24 @@ const Goals: React.FC<GoalsProps> = ({ userId }) => {
 
       {isAdding && (
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-indigo-100 animate-in slide-in-from-top duration-300 space-y-4">
-          <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="লক্ষ্য কি?" className="w-full p-4 bg-slate-50 rounded-xl font-bold" />
+          <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="লক্ষ্য কি?" className="w-full p-4 bg-slate-50 rounded-xl font-bold border border-slate-100 outline-none focus:border-indigo-500" />
           <div className="grid grid-cols-2 gap-4">
-            <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="p-4 bg-slate-50 rounded-xl font-bold">
+            <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="p-4 bg-slate-50 rounded-xl font-bold border border-slate-100 outline-none">
               <option>ক্যারিয়ার</option>
               <option>ব্যক্তিগত</option>
               <option>স্বাস্থ্য</option>
               <option>অর্থনীতি</option>
             </select>
-            <input type="text" value={newTargetDate} onChange={(e) => setNewTargetDate(e.target.value)} placeholder="টার্গেট তারিখ" className="p-4 bg-slate-50 rounded-xl font-bold" />
+            <input type="text" value={newTargetDate} onChange={(e) => setNewTargetDate(e.target.value)} placeholder="টার্গেট তারিখ" className="p-4 bg-slate-50 rounded-xl font-bold border border-slate-100 outline-none focus:border-indigo-500" />
           </div>
-          <button onClick={addGoal} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl">সেভ করুন</button>
+          <button 
+            onClick={addGoal} 
+            disabled={isSaving}
+            className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isSaving && <Loader2 className="animate-spin" size={20} />}
+            {isSaving ? 'সেভ হচ্ছে...' : 'সেভ করুন'}
+          </button>
         </div>
       )}
 
@@ -139,7 +164,7 @@ const Goals: React.FC<GoalsProps> = ({ userId }) => {
           </div>
         ))}
         {!isLoading && goals.length === 0 && !isAdding && (
-          <div className="col-span-full py-20 text-center text-slate-400 bg-white rounded-3xl border border-dashed border-slate-200">
+          <div className="col-span-full py-20 text-center text-slate-400 bg-white rounded-3xl border border-dashed border-slate-200 font-bold">
             কোনো লক্ষ্য যোগ করা হয়নি।
           </div>
         )}
