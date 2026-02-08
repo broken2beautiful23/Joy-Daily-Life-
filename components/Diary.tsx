@@ -10,7 +10,7 @@ interface DiaryProps {
 }
 
 const Diary: React.FC<DiaryProps> = ({ userId }) => {
-  const [entries, setEntries] = useState<DiaryEntry[]>([]);
+  const [entries, setEntries] = useState<any[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [newContent, setNewContent] = useState('');
   const [selectedMood, setSelectedMood] = useState<Mood>(Mood.GOOD);
@@ -53,10 +53,6 @@ const Diary: React.FC<DiaryProps> = ({ userId }) => {
       alert("দয়া করে কিছু লিখুন!");
       return;
     }
-    if (!userId) {
-      alert("ইউজার সেশন পাওয়া যায়নি। দয়া করে আবার লগইন করুন।");
-      return;
-    }
     
     setIsSaving(true);
     try {
@@ -67,7 +63,7 @@ const Diary: React.FC<DiaryProps> = ({ userId }) => {
           date: new Date().toISOString(),
           mood: selectedMood,
           content: newContent,
-          isImportant: false
+          is_important: false
         }])
         .select();
 
@@ -96,8 +92,6 @@ const Diary: React.FC<DiaryProps> = ({ userId }) => {
 
       if (!error) {
         setEntries(entries.filter(e => e.id !== id));
-      } else {
-        alert("মুছতে সমস্যা হয়েছে।");
       }
     }
   };
@@ -159,7 +153,7 @@ const Diary: React.FC<DiaryProps> = ({ userId }) => {
             <article key={entry.id} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md group relative">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{MOOD_EMOJIS[entry.mood]}</span>
+                  <span className="text-2xl">{MOOD_EMOJIS[entry.mood as Mood]}</span>
                   <div>
                     <h4 className="font-bold text-slate-800">{new Date(entry.date).toLocaleDateString('bn-BD', { weekday: 'long', month: 'long', day: 'numeric' })}</h4>
                     <p className="text-xs text-slate-400 flex items-center gap-1"><CalendarIcon size={12} /> {new Date(entry.date).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })}</p>
@@ -171,7 +165,7 @@ const Diary: React.FC<DiaryProps> = ({ userId }) => {
                   </button>
                 </div>
               </div>
-              <div className={`p-1 mb-4 inline-block rounded-md text-[10px] font-bold uppercase tracking-widest px-2 ${MOOD_COLORS[entry.mood]}`}>
+              <div className={`p-1 mb-4 inline-block rounded-md text-[10px] font-bold uppercase tracking-widest px-2 ${MOOD_COLORS[entry.mood as Mood]}`}>
                 অনুভব: {moodTranslations[entry.mood]}
               </div>
               <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">{entry.content}</p>

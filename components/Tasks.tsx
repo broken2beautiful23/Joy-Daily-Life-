@@ -28,6 +28,7 @@ const Tasks: React.FC<TasksProps> = ({ userId }) => {
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -41,22 +42,19 @@ const Tasks: React.FC<TasksProps> = ({ userId }) => {
 
   const addTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTask.trim()) return;
+    if (!newTask.trim() || !userId) return;
     
     setIsSaving(true);
     try {
-      const payload: any = { 
-        text: newTask, 
-        completed: false, 
-        category, 
-        priority 
-      };
-
-      if (userId) payload.user_id = userId;
-
       const { data, error } = await supabase
         .from('tasks')
-        .insert([payload])
+        .insert([{ 
+          user_id: userId,
+          text: newTask, 
+          completed: false, 
+          category, 
+          priority 
+        }])
         .select();
 
       if (error) throw error;
@@ -76,7 +74,8 @@ const Tasks: React.FC<TasksProps> = ({ userId }) => {
     const { error } = await supabase
       .from('tasks')
       .update({ completed: !currentStatus })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', userId);
 
     if (!error) {
       setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !currentStatus } : t));
@@ -85,7 +84,11 @@ const Tasks: React.FC<TasksProps> = ({ userId }) => {
 
   const deleteTask = async (id: string) => {
     if (window.confirm('Delete this task?')) {
-      const { error } = await supabase.from('tasks').delete().eq('id', id);
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
       if (!error) setTasks(prev => prev.filter(t => t.id !== id));
     }
   };
@@ -94,7 +97,6 @@ const Tasks: React.FC<TasksProps> = ({ userId }) => {
     <div className="max-w-4xl mx-auto space-y-8">
       <header>
         <h2 className="text-3xl font-bold text-slate-800 tracking-tight">টাস্ক ম্যানেজার</h2>
-        <p className="text-slate-500 font-medium">আপনার আজকের কাজগুলো গুছিয়ে রাখুন।</p>
       </header>
 
       <form onSubmit={addTask} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">

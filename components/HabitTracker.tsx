@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Habit } from '../types';
-import { Plus, Flame, Check, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Flame, Check, Trash2, Loader2, X } from 'lucide-react';
 import { supabase } from '../services/supabase';
 
 interface HabitTrackerProps {
@@ -9,10 +9,11 @@ interface HabitTrackerProps {
 }
 
 const HabitTracker: React.FC<HabitTrackerProps> = ({ userId }) => {
-  const [habits, setHabits] = useState<Habit[]>([]);
+  const [habits, setHabits] = useState<any[]>([]);
   const [newHabitName, setNewHabitName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
 
   const today = new Date();
   const days = Array.from({length: 7}).map((_, i) => {
@@ -42,7 +43,6 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ userId }) => {
 
   const addHabit = async () => {
     if (!newHabitName.trim() || !userId) return;
-    
     setIsSaving(true);
     try {
       const { data, error } = await supabase
@@ -50,130 +50,125 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ userId }) => {
         .insert([{ 
           user_id: userId,
           name: newHabitName, 
-          completedDates: [], 
+          completed_dates: [], 
           streak: 0, 
-          targetPerWeek: 7 
+          target_per_week: 7 
         }])
         .select();
-
-      if (error) throw error;
-
-      if (data) {
+      if (!error && data) {
         setHabits([...habits, data[0]]);
         setNewHabitName('');
+        setShowAdd(false);
       }
-    } catch (err: any) {
-      alert(`ত্রুটি: ${err.message}`);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const toggleDay = async (habitId: string, date: string) => {
-    const habit = habits.find(h => h.id === habitId);
-    if (!habit) return;
-
-    const isCompleted = habit.completedDates.includes(date);
-    const newDates = isCompleted 
-      ? habit.completedDates.filter(d => d !== date) 
-      : [...habit.completedDates, date];
+  const toggleDay = async (habit: any, date: string) => {
+    if (!userId) return;
+    const currentDates = [...(habit.completed_dates || [])];
+    const index = currentDates.indexOf(date);
+    
+    if (index > -1) {
+      currentDates.splice(index, 1);
+    } else {
+      currentDates.push(date);
+    }
 
     const { error } = await supabase
       .from('habits')
-      .update({ completedDates: newDates })
-      .eq('id', habitId)
+      .update({ completed_dates: currentDates })
+      .eq('id', habit.id)
       .eq('user_id', userId);
-    
+
     if (!error) {
-      setHabits(habits.map(h => h.id === habitId ? { ...h, completedDates: newDates } : h));
+      setHabits(habits.map(h => h.id === habit.id ? { ...h, completed_dates: currentDates } : h));
     }
   };
 
   const deleteHabit = async (id: string) => {
-    if (window.confirm('এই অভ্যাসটি কি ডিলিট করতে চান?')) {
-      const { error } = await supabase
-        .from('habits')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', userId);
+    if (window.confirm('মুছে ফেলতে চান?')) {
+      const { error } = await supabase.from('habits').delete().eq('id', id).eq('user_id', userId);
       if (!error) setHabits(habits.filter(h => h.id !== id));
     }
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
+      <header className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800 tracking-tight">অভ্যাস ট্র্যাকার</h2>
+          <h2 className="text-3xl font-black text-slate-800">অভ্যাস ট্র্যাকার</h2>
           {isLoading && <Loader2 className="animate-spin text-indigo-500 mt-2" size={16} />}
         </div>
-        <div className="flex gap-2">
+        <button onClick={() => setShowAdd(!showAdd)} className="bg-indigo-600 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg active:scale-95 transition-all">
+          {showAdd ? <X size={20} /> : <Plus size={20} />}
+          <span className="font-bold">{showAdd ? 'বাতিল' : 'নতুন অভ্যাস'}</span>
+        </button>
+      </header>
+
+      {showAdd && (
+        <div className="bg-white p-6 rounded-3xl border border-indigo-100 shadow-xl flex gap-4 animate-in slide-in-from-top duration-300">
           <input 
             type="text" 
             value={newHabitName} 
             onChange={(e) => setNewHabitName(e.target.value)} 
-            placeholder="নতুন অভ্যাসের নাম..." 
-            className="bg-white border border-slate-200 px-4 py-3 rounded-xl outline-none font-bold" 
+            placeholder="নতুন অভ্যাস লিখুন..." 
+            className="flex-1 bg-slate-50 border-none rounded-xl px-6 font-bold outline-none focus:ring-2 focus:ring-indigo-500/20"
           />
           <button 
             onClick={addHabit} 
             disabled={isSaving}
-            className="bg-indigo-600 text-white p-3 rounded-xl shadow-md active:scale-95 transition-all disabled:opacity-50"
+            className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg disabled:opacity-50"
           >
-            {isSaving ? <Loader2 className="animate-spin" size={24} /> : <Plus />}
+            {isSaving ? <Loader2 className="animate-spin" size={20} /> : 'যোগ করুন'}
           </button>
         </div>
-      </header>
+      )}
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 md:p-8 overflow-x-auto custom-scrollbar">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-50 text-left">
-                <th className="py-4 px-4 font-black text-slate-400 uppercase text-[10px] tracking-widest">অভ্যাসের নাম</th>
-                {days.map(d => (
-                  <th key={d} className="py-4 px-2 text-center">
-                    <span className="text-[10px] font-black text-slate-400 block uppercase">{weekDayNames[new Date(d).getDay() as keyof typeof weekDayNames]}</span>
-                    <span className="text-sm font-black text-slate-700">{new Date(d).getDate()}</span>
-                  </th>
-                ))}
-                <th className="py-4 px-4 text-center font-black text-slate-400 uppercase text-[10px] tracking-widest">স্ট্রিক</th>
-                <th className="py-4 px-4"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {habits.map((habit) => (
-                <tr key={habit.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors group">
-                  <td className="py-6 px-4"><span className="font-bold text-slate-800 text-lg">{habit.name}</span></td>
-                  {days.map(d => {
-                    const isDone = habit.completedDates.includes(d);
-                    return (
-                      <td key={d} className="py-6 px-2 text-center">
-                        <button onClick={() => toggleDay(habit.id, d)} className={`w-10 h-10 rounded-xl transition-all flex items-center justify-center ${isDone ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 text-slate-300 hover:bg-slate-200'}`}>
-                          {isDone ? <Check size={20} /> : <div className="w-2 h-2 rounded-full bg-slate-300"></div>}
-                        </button>
-                      </td>
-                    );
-                  })}
-                  <td className="py-6 px-4 text-center">
-                    <div className="flex items-center justify-center gap-1 text-orange-500 font-black bg-orange-50 px-3 py-2 rounded-xl">
-                      <Flame size={18} />
-                      <span>{habit.streak}</span>
-                    </div>
-                  </td>
-                  <td className="py-6 px-4">
-                    <button onClick={() => deleteHabit(habit.id)} className="p-2 text-slate-300 hover:text-red-500">
-                      <Trash2 size={20} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!isLoading && habits.length === 0 && (
-            <div className="text-center py-20 text-slate-300 italic font-medium">কোনো অভ্যাস ট্র্যাকিং করা হচ্ছে না।</div>
-          )}
-        </div>
+      <div className="grid grid-cols-1 gap-6">
+        {habits.map((habit) => (
+          <div key={habit.id} className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-8 group hover:shadow-xl transition-all">
+            <div className="flex items-center gap-6">
+              <div className="w-14 h-14 bg-orange-50 text-orange-500 rounded-2xl flex items-center justify-center">
+                <Flame size={28} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-800">{habit.name}</h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                  স্ট্রিক: {habit.completed_dates?.length || 0} দিন সম্পন্ন
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              {days.map((date) => {
+                const isCompleted = habit.completed_dates?.includes(date);
+                const dayName = weekDayNames[new Date(date).getDay() as keyof typeof weekDayNames];
+                return (
+                  <button
+                    key={date}
+                    onClick={() => toggleDay(habit, date)}
+                    className={`w-12 h-16 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all border-2 ${
+                      isCompleted 
+                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg' 
+                        : 'bg-slate-50 border-transparent text-slate-400 hover:border-slate-200'
+                    }`}
+                  >
+                    <span className="text-[9px] font-black uppercase">{dayName}</span>
+                    {isCompleted ? <Check size={18} strokeWidth={4} /> : <div className="w-2 h-2 rounded-full bg-slate-200" />}
+                  </button>
+                );
+              })}
+              <button 
+                onClick={() => deleteHabit(habit.id)}
+                className="ml-4 p-3 text-slate-200 hover:text-red-500 transition-colors"
+              >
+                <Trash2 size={20} />
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

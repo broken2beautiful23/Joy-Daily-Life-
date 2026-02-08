@@ -9,7 +9,7 @@ interface Goal {
   title: string;
   category: string;
   progress: number;
-  targetDate: string;
+  target_date: string;
 }
 
 interface GoalsProps {
@@ -54,7 +54,7 @@ const Goals: React.FC<GoalsProps> = ({ userId }) => {
           title: newTitle,
           category: newCategory,
           progress: 0,
-          targetDate: newTargetDate || 'অনির্ধারিত'
+          target_date: newTargetDate || 'অনির্ধারিত'
         }])
         .select();
 
@@ -147,7 +147,7 @@ const Goals: React.FC<GoalsProps> = ({ userId }) => {
             <h3 className="text-xl font-bold text-slate-800 mb-2">{goal.title}</h3>
             <div className="flex items-center gap-2 text-sm text-slate-400 font-medium mb-6">
               <Calendar size={14} />
-              <span>টার্গেট: {goal.targetDate}</span>
+              <span>টার্গেট: {goal.target_date}</span>
             </div>
             <div className="space-y-3">
               <div className="flex justify-between text-xs font-black uppercase tracking-widest">
@@ -163,11 +163,6 @@ const Goals: React.FC<GoalsProps> = ({ userId }) => {
             </button>
           </div>
         ))}
-        {!isLoading && goals.length === 0 && !isAdding && (
-          <div className="col-span-full py-20 text-center text-slate-400 bg-white rounded-3xl border border-dashed border-slate-200 font-bold">
-            কোনো লক্ষ্য যোগ করা হয়নি।
-          </div>
-        )}
       </div>
     </div>
   );

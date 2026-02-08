@@ -41,6 +41,7 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
+        .eq('user_id', userId)
         .order('date', { ascending: false });
       
       if (error) throw error;
@@ -60,30 +61,19 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
     
     setIsSaving(true);
     try {
-      // We try to include user_id. If the column is missing in DB, this will fail
-      // but the user will get a clear message based on your screenshot error.
-      const payload: any = {
-        date: new Date().toISOString(), 
-        amount: parseFloat(amount), 
-        type, 
-        category, 
-        note 
-      };
-
-      // Add user_id only if it's available
-      if (userId) {
-        payload.user_id = userId;
-      }
-
       const { data, error } = await supabase
         .from('transactions')
-        .insert([payload])
+        .insert([{
+          user_id: userId,
+          date: new Date().toISOString(), 
+          amount: parseFloat(amount), 
+          type, 
+          category, 
+          note 
+        }])
         .select();
 
-      if (error) {
-        console.error("Supabase Error:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       if (data) {
         setTransactions([data[0], ...transactions]);
@@ -93,14 +83,7 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
         alert(lang === 'bn' ? "সফলভাবে সেভ হয়েছে!" : "Saved successfully!");
       }
     } catch (err: any) {
-      const errorMsg = err.message || "Unknown error";
-      if (errorMsg.includes("user_id")) {
-        alert(lang === 'bn' 
-          ? "আপনার সুপাবেস ডাটাবেসে 'user_id' কলামটি নেই। দয়া করে ড্যাশবোর্ড থেকে কলামটি যোগ করুন।" 
-          : "The 'user_id' column is missing in your Supabase table. Please add it via Supabase Dashboard.");
-      } else {
-        alert(lang === 'bn' ? `ত্রুটি: ${errorMsg}` : `Error: ${errorMsg}`);
-      }
+      alert(lang === 'bn' ? `ত্রুটি: ${err.message}` : `Error: ${err.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -108,7 +91,11 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
 
   const deleteTransaction = async (id: string) => {
     if (window.confirm(lang === 'bn' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?')) {
-      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
       if (!error) {
         setTransactions(transactions.filter(t => t.id !== id));
       }
@@ -123,7 +110,7 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
     <div className="space-y-8 max-w-5xl mx-auto animate-in fade-in duration-500">
       <header className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-black text-slate-800">{t.finance_title}</h2>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight">{t.finance_title}</h2>
         </div>
         <button onClick={() => setShowAdd(!showAdd)} className="bg-indigo-600 text-white px-6 py-3 rounded-2xl flex items-center gap-2 shadow-lg active:scale-95 transition-all">
           {showAdd ? <X /> : <Plus size={20} />}

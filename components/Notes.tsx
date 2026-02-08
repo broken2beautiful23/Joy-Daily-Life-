@@ -9,7 +9,7 @@ interface NotesProps {
 }
 
 const Notes: React.FC<NotesProps> = ({ userId }) => {
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [notes, setNotes] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
@@ -27,7 +27,7 @@ const Notes: React.FC<NotesProps> = ({ userId }) => {
         .from('notes')
         .select('*')
         .eq('user_id', userId)
-        .order('updatedAt', { ascending: false });
+        .order('updated_at', { ascending: false });
       if (!error && data) setNotes(data);
     } finally {
       setIsLoading(false);
@@ -45,7 +45,7 @@ const Notes: React.FC<NotesProps> = ({ userId }) => {
           user_id: userId,
           title: 'নতুন নোট', 
           content: '', 
-          updatedAt: new Date().toISOString() 
+          updated_at: new Date().toISOString() 
         }])
         .select();
 
@@ -62,7 +62,7 @@ const Notes: React.FC<NotesProps> = ({ userId }) => {
     }
   };
 
-  const startEditing = (note: Note) => {
+  const startEditing = (note: any) => {
     setEditingId(note.id);
     setEditTitle(note.title);
     setEditContent(note.content);
@@ -70,20 +70,20 @@ const Notes: React.FC<NotesProps> = ({ userId }) => {
 
   const saveEdit = async () => {
     if (!editingId || !userId) return;
-    const updatedAt = new Date().toISOString();
+    const updated_at = new Date().toISOString();
     
     const { error } = await supabase
       .from('notes')
       .update({ 
         title: editTitle, 
         content: editContent, 
-        updatedAt 
+        updated_at 
       })
       .eq('id', editingId)
       .eq('user_id', userId);
 
     if (!error) {
-      setNotes(notes.map(n => n.id === editingId ? { ...n, title: editTitle, content: editContent, updatedAt } : n));
+      setNotes(notes.map(n => n.id === editingId ? { ...n, title: editTitle, content: editContent, updated_at } : n));
       setEditingId(null);
     } else {
       alert("সেভ করতে সমস্যা হয়েছে।");
@@ -137,7 +137,7 @@ const Notes: React.FC<NotesProps> = ({ userId }) => {
                 </div>
                 <h3 className="text-lg font-bold text-slate-800 mb-2">{note.title}</h3>
                 <p className="text-slate-500 text-sm line-clamp-4 leading-relaxed whitespace-pre-wrap">{note.content || 'খালি নোট...'}</p>
-                <div className="mt-4 pt-4 border-t border-slate-50 text-[10px] text-slate-400 font-bold uppercase">আপডেট: {new Date(note.updatedAt).toLocaleDateString('bn-BD')}</div>
+                <div className="mt-4 pt-4 border-t border-slate-50 text-[10px] text-slate-400 font-bold uppercase">আপডেট: {new Date(note.updated_at).toLocaleDateString('bn-BD')}</div>
               </>
             )}
           </div>
