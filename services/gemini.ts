@@ -1,5 +1,5 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `আপনার নাম জয় কুমার বিশ্বাস। আপনি একজন প্রফেশনাল লাইফ কোচ এবং প্রোডাক্টিভিটি এক্সপার্ট। 
 আপনার কথা বলার ভঙ্গি খুব উৎসাহব্যঞ্জক, সহমর্মী এবং সংক্ষিপ্ত। 
@@ -25,10 +25,10 @@ export async function generateDailySummary(data: any) {
         temperature: 0.7,
       },
     });
-    return response.text || "আপনার প্রচেষ্টা আপনাকে অনেক দূরে নিয়ে যাবে। এগিয়ে যান! - জয় কুমার বিশ্বাস";
+    return response.text || "আপনার প্রচেষ্টা আপনাকে অনেক দূরে নিয়ে যাবে। এগিয়ে যান!";
   } catch (error) {
     console.error("AI Insight Error:", error);
-    return "আপনার আজকের যাত্রা চমৎকার হোক! আপনার কাজের হিসাবগুলো আমি দেখছি। - জয় কুমার বিশ্বাস";
+    return "আপনার আজকের যাত্রা চমৎকার হোক!";
   }
 }
 
@@ -50,9 +50,33 @@ export async function chatWithJoy(userMessage: string, userData: any) {
         temperature: 0.8,
       },
     });
-    return response.text || "আমি আপনার কথা বুঝতে পারছি। আমি আপনার পাশেই আছি। - জয় কুমার বিশ্বাস";
+    return response.text || "আমি আপনার কথা বুঝতে পারছি।";
   } catch (error) {
     console.error("Chat Error:", error);
-    return "আমি আপনার কথাগুলো শুনছি। জীবনের প্রতিটি পদক্ষেপে আমি আপনার সাথে থাকতে চাই। - জয় কুমার বিশ্বাস";
+    throw error;
+  }
+}
+
+export async function speakText(text: string): Promise<string | null> {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: `Say cheerfully: ${text}` }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Kore' }, // Kore is a warm voice
+          },
+        },
+      },
+    });
+
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    return base64Audio || null;
+  } catch (error) {
+    console.error("TTS Error:", error);
+    return null;
   }
 }
