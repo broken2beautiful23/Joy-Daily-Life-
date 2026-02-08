@@ -20,7 +20,10 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
     }
   }, [messages, isTyping]);
 
@@ -36,15 +39,11 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
     try {
       const response = await chatWithJoy(userMsg, { userName });
-      if (response) {
-        setMessages(prev => [...prev, { role: 'joy', text: response }]);
-      } else {
-        throw new Error("No response from AI");
-      }
+      setMessages(prev => [...prev, { role: 'joy', text: response }]);
     } catch (error) {
       console.error("Chat Error:", error);
       setError(lang === 'bn' ? "কানেকশনে সমস্যা হচ্ছে।" : "Connection problem.");
-      setMessages(prev => [...prev, { role: 'joy', text: "দুঃখিত, আমার সার্ভারে বর্তমানে সমস্যা হচ্ছে। দয়া করে একটু পর আবার চেষ্টা করুন।" }]);
+      setMessages(prev => [...prev, { role: 'joy', text: "দুঃখিত, বর্তমানে এআই সার্ভারে সংযোগ পেতে সমস্যা হচ্ছে। দয়া করে কিছুক্ষণ পর আবার চেষ্টা করুন।" }]);
     } finally {
       setIsTyping(false);
     }
@@ -54,11 +53,11 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end">
       {/* Chat Window */}
       {isOpen && (
-        <div className="mb-4 w-[350px] md:w-[400px] h-[500px] bg-white/90 backdrop-blur-2xl rounded-[32px] shadow-2xl border border-blue-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-300">
+        <div className="mb-4 w-[350px] md:w-[400px] h-[550px] bg-white rounded-[32px] shadow-2xl border border-blue-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
           {/* Header */}
-          <div className="p-6 bg-blue-600 text-white flex items-center justify-between shadow-lg">
+          <div className="p-5 bg-blue-600 text-white flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center border border-white/30">
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center border border-white/20">
                 <UserCheck size={20} />
               </div>
               <div>
@@ -72,7 +71,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
           </div>
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-blue-50/20">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50 custom-scrollbar">
             {messages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 opacity-40">
                 <Sparkles size={40} className="mb-4 text-blue-400" />
@@ -82,11 +81,11 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
               </div>
             )}
             {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] p-4 rounded-2xl text-sm font-bold shadow-sm ${
+              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
+                <div className={`max-w-[85%] p-4 rounded-2xl text-sm font-bold shadow-sm whitespace-pre-wrap ${
                   msg.role === 'user' 
                     ? 'bg-blue-600 text-white rounded-tr-none' 
-                    : 'bg-white text-slate-700 rounded-tl-none border border-blue-50'
+                    : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'
                 }`}>
                   {msg.text}
                 </div>
@@ -94,7 +93,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
             ))}
             {isTyping && (
               <div className="flex justify-start">
-                <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-blue-50 shadow-sm flex items-center gap-2">
+                <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-100 shadow-sm flex items-center gap-2">
                   <div className="flex gap-1">
                     <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></span>
                     <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
@@ -103,24 +102,17 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                 </div>
               </div>
             )}
-            {error && (
-              <div className="flex justify-center">
-                <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-500 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                  <AlertCircle size={12} /> {error}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Input */}
-          <form onSubmit={handleSendMessage} className="p-6 bg-white border-t border-blue-50">
+          <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-slate-100">
             <div className="relative">
               <input 
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={t.ask_joy}
-                className="w-full pl-6 pr-14 py-4 bg-blue-50/50 border border-blue-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:outline-none focus:bg-white transition-all font-bold text-slate-800"
+                className="w-full pl-5 pr-14 py-4 bg-slate-100 border-none rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:outline-none focus:bg-white transition-all font-bold text-slate-800"
               />
               <button 
                 type="submit"
@@ -141,15 +133,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
           isOpen ? 'bg-slate-900 rotate-90' : 'blue-btn'
         }`}
       >
-        <div className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 rounded-full border-4 border-white animate-pulse"></div>
+        <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-white"></div>
         {isOpen ? <X size={24} /> : <MessageSquare size={28} />}
-        
-        {/* Tooltip */}
-        {!isOpen && (
-          <div className="absolute right-20 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest py-2 px-4 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">
-            {t.ai_name} এর সাথে কথা বলুন
-          </div>
-        )}
       </button>
     </div>
   );
