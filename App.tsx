@@ -19,7 +19,7 @@ import { supabase } from './services/supabase';
 import { 
   Lock, LogOut, Menu, X, Sparkles, Mail, 
   ArrowRight, ShieldCheck, RefreshCw, 
-  User, Palette, Loader2, Eye, EyeOff, Key, ExternalLink
+  User, Palette, Loader2, Eye, EyeOff, Key, ExternalLink, AlertTriangle
 } from 'lucide-react';
 
 type AppTheme = 'blue' | 'rose' | 'emerald' | 'dark';
@@ -56,8 +56,8 @@ const App: React.FC = () => {
     };
     
     checkApiKey();
-    // Re-check periodically or set up an interval if needed
-    const interval = setInterval(checkApiKey, 5000);
+    // Re-check periodically for mobile environments
+    const interval = setInterval(checkApiKey, 3000);
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -425,10 +425,10 @@ const App: React.FC = () => {
           <div className="flex items-center gap-4">
              {!hasApiKey && (
                <div className="flex flex-col items-end gap-1">
-                 <button onClick={handleSelectKey} className="flex items-center gap-2 bg-amber-600 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-xl border border-amber-500 animate-pulse hover:scale-105 transition-all">
+                 <button onClick={handleSelectKey} className="flex items-center gap-2 bg-amber-600 text-white px-5 py-2.5 rounded-xl text-[10px] md:text-xs font-black shadow-xl border border-amber-500 animate-pulse hover:scale-105 transition-all">
                    <Key size={14} /> <span>এপিআই কী সিলেক্ট করুন</span>
                  </button>
-                 <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="text-[8px] font-bold text-amber-600 underline flex items-center gap-1">
+                 <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="hidden md:flex text-[8px] font-bold text-amber-600 underline items-center gap-1">
                    পেইড প্রজেক্ট প্রয়োজন <ExternalLink size={8} />
                  </a>
                </div>
@@ -443,7 +443,7 @@ const App: React.FC = () => {
               <User size={16} /> <span>{lang === 'bn' ? 'EN' : 'BN'}</span>
             </button>
 
-            <div className="flex items-center gap-4 pl-4 border-l border-blue-50">
+            <div className="hidden sm:flex items-center gap-4 pl-4 border-l border-blue-50">
               <div className="hidden md:block text-right">
                 <p className="text-sm font-black text-slate-900">{userName}</p>
                 <p className="text-[10px] font-black text-blue-500/50 uppercase">Active Now</p>
@@ -454,6 +454,17 @@ const App: React.FC = () => {
             </div>
           </div>
         </header>
+
+        {/* Global Connection Warning for Mobile */}
+        {!hasApiKey && (
+          <div className="bg-amber-100 border-b border-amber-200 px-8 py-3 flex items-center gap-3 animate-in slide-in-from-top duration-500">
+            <AlertTriangle className="text-amber-600" size={18} />
+            <p className="text-[10px] md:text-xs font-bold text-amber-800">
+              {lang === 'bn' ? 'এআই ফিচার ব্যবহার করতে অনুগ্রহ করে একটি বিলিং-সক্রিয় প্রজেক্টের এপিআই কী সিলেক্ট করুন।' : 'Please select a billing-enabled API Key to use AI features.'}
+            </p>
+            <button onClick={handleSelectKey} className="ml-auto bg-amber-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">সিলেক্ট করুন</button>
+          </div>
+        )}
 
         <div className="flex-1 p-8 lg:p-12">
           <div className="max-w-7xl mx-auto pb-24">

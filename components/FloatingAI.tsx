@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   MessageSquare, Send, X, UserCheck, Loader2, Sparkles, 
-  Minimize2, Volume2, VolumeX, Mic, MicOff, AlertCircle, Key, ExternalLink
+  Minimize2, Volume2, VolumeX, Mic, MicOff, AlertCircle, Key, ExternalLink, RefreshCw
 } from 'lucide-react';
 import { chatWithJoy, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -79,6 +79,12 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
       try {
         await window.aistudio.openSelectKey();
         setError(null);
+        // GUIDELINE: Assume success after triggering to mitigate race conditions
+        setTimeout(() => {
+          if (messages.length > 0 && messages[messages.length-1].role === 'user') {
+            handleSendMessage();
+          }
+        }, 500);
       } catch (e) {
         console.error("Key selection failed", e);
       }
@@ -122,12 +128,16 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!input.trim() || isTyping) return;
+    const userMsg = input.trim() || (messages.length > 0 && messages[messages.length-1].role === 'user' ? messages[messages.length-1].text : '');
+    
+    if (!userMsg || isTyping) return;
 
-    const userMsg = input.trim();
-    setInput('');
+    if (input.trim()) {
+      setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+      setInput('');
+    }
+    
     setError(null);
-    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setIsTyping(true);
 
     try {
@@ -141,21 +151,19 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
       console.error("Chat Error:", error);
       const errorMsg = error.message?.toLowerCase() || "";
       
-      // GUIDELINE: Reset key selection state and prompt user to select a key again if "Requested entity was not found"
+      // GUIDELINE: Detect "Requested entity was not found" or key errors
       const isEntityNotFoundError = errorMsg.includes("requested entity was not found") || errorMsg.includes("404");
-      const isUnauthorizedError = errorMsg.includes("api key") || errorMsg.includes("unauthorized") || errorMsg.includes("invalid_argument");
+      const isUnauthorizedError = errorMsg.includes("api key") || errorMsg.includes("unauthorized") || errorMsg.includes("invalid_argument") || errorMsg.includes("key not found");
       
       if (isEntityNotFoundError) {
-        setError(lang === 'bn' ? "এই এপিআই কী-তে জেমিনি ৩ ব্যবহারের অনুমতি নেই। পেইড প্রজেক্ট থেকে কী সিলেক্ট করুন।" : "This API Key lacks access to Gemini 3. Please select a key from a Paid project.");
-        // Optional: Automaticaly trigger key selection for bad errors
-        // handleSelectKey();
+        setError(lang === 'bn' ? "আপনার এপিআই কী-তে এই মডেল ব্যবহারের অনুমতি নেই। অনুগ্রহ করে একটি পেইড প্রজেক্ট থেকে কী সিলেক্ট করুন।" : "Your API Key lacks access to this model. Please select a key from a Paid billing project.");
       } else if (isUnauthorizedError) {
-        setError(lang === 'bn' ? "এপিআই কী কাজ করছে না। দয়া করে সঠিক কী সিলেক্ট করুন।" : "API Key is not working. Please select a valid key.");
+        setError(lang === 'bn' ? "এপিআই কী কাজ করছে না। সঠিক কী সিলেক্ট করুন।" : "API Key is invalid or not found. Please select a valid key.");
       } else {
-        setError(lang === 'bn' ? "কানেকশনে সমস্যা হচ্ছে। দয়া করে নেটওয়ার্ক চেক করুন।" : "Connection problem. Please check your network.");
+        setError(lang === 'bn' ? "কানেকশনে সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।" : "Connection problem. Please try again.");
       }
       
-      setMessages(prev => [...prev, { role: 'joy', text: lang === 'bn' ? "দুঃখিত, বর্তমানে আমার সাথে সংযোগ স্থাপন করা সম্ভব হচ্ছে না।" : "Sorry, I can't connect at the moment." }]);
+      setMessages(prev => [...prev, { role: 'joy', text: lang === 'bn' ? "দুঃখিত, সংযোগ স্থাপন করা যাচ্ছে না। আপনার এপিআই কী-টি ঠিক করে নিন।" : "Sorry, I can't connect. Please fix your API Key selection." }]);
     } finally {
       setIsTyping(false);
     }
@@ -234,15 +242,22 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                 <AlertCircle size={16} className="text-amber-600" /> 
                 <span>{error}</span>
               </div>
-              <button 
-                onClick={handleSelectKey} 
-                className="w-full py-2.5 bg-amber-600 text-white rounded-xl flex items-center justify-center gap-2 shadow-md hover:bg-amber-700 active:scale-95 transition-all"
-              >
-                <Key size={14} /> এপিআই কী সিলেক্ট করুন
-              </button>
-              <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="text-[9px] font-bold text-amber-600 underline flex items-center justify-center gap-1">
-                পেইড জিসিপি প্রজেক্ট ব্যবহার করুন <ExternalLink size={10} />
-              </a>
+              <div className="flex flex-col gap-2">
+                <button 
+                  onClick={handleSelectKey} 
+                  className="w-full py-2.5 bg-amber-600 text-white rounded-xl flex items-center justify-center gap-2 shadow-md hover:bg-amber-700 active:scale-95 transition-all"
+                >
+                  <Key size={14} /> এপিআই কী সিলেক্ট করুন
+                </button>
+                <div className="flex items-center justify-between gap-2">
+                  <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="text-[9px] font-bold text-amber-600 underline flex items-center gap-1">
+                    পেইড জিসিপি প্রজেক্ট গাইড <ExternalLink size={10} />
+                  </a>
+                  <button onClick={() => handleSendMessage()} className="text-amber-700 hover:text-amber-900 flex items-center gap-1">
+                    <RefreshCw size={10} /> পুনরায় চেষ্টা করুন
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
