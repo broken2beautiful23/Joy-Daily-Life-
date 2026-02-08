@@ -12,13 +12,6 @@ export const translations = {
     language: "ভাষা / Language",
     welcome: "কেমন আছেন,",
     today_start: "আজ আপনার জীবনের একটি নতুন পাতা শুরু হোক।",
-    ai_focus: "আজকের ফোকাস",
-    ai_assistant: "AI অ্যাসিস্ট্যান্ট",
-    ai_name: "জয় কুমার বিশ্বাস",
-    ai_role: "লাইফ কোচ ও গাইড",
-    ask_joy: "জয় কুমারকে কিছু জিজ্ঞাসা করুন...",
-    type_msg: "আপনার চিন্তা লিখুন...",
-    ai_thinking: "জয় কুমার বিশ্বাস ভাবছেন...",
     habit_streak: "অভ্যাস স্ট্রিক",
     tasks_done: "কাজ সম্পন্ন",
     weekly_exp: "সাপ্তাহিক খরচ",
@@ -61,7 +54,7 @@ export const translations = {
     theme_emerald: "এমারেল্ড নেচার",
     theme_dark: "মিডনাইট ডার্ক",
     theme_naruto: "হকেজ অরেঞ্জ (Naruto)",
-    theme_motivational: "মোটিভেশনাল লাইট (Sun)",
+    theme_motivational: "মোティブেশনাল লাইট (Sun)",
     work_log_title: "কাজ ও শিখন লগ",
     work_hours: "কাজের ঘণ্টা",
     learning_today: "আজ যা শিখলাম",
@@ -80,7 +73,10 @@ export const translations = {
     work_duration: "কাজের সময় (মিনিট/ঘণ্টা)",
     skip_game: "স্কিপ দা গেম",
     web_design: "ওয়েব ডিজাইন",
-    canva_work: "ক্যানভা ডিজাইন"
+    canva_work: "ক্যানভা ডিজাইন",
+    ai_name: "জয় কুমার বিশ্বাস",
+    ai_role: "পার্সোনাল লাইফ কোচ",
+    ask_joy: "জয়কে কিছু জিজ্ঞাসা করুন..."
   },
   en: {
     app_name: "JoyLife",
@@ -94,13 +90,6 @@ export const translations = {
     language: "Language / ভাষা",
     welcome: "How are you,",
     today_start: "Let a new page of your life begin today.",
-    ai_focus: "Today's Focus",
-    ai_assistant: "AI Assistant",
-    ai_name: "Joy Kumar Biswas",
-    ai_role: "Life Coach & Guide",
-    ask_joy: "Ask Joy Kumar anything...",
-    type_msg: "Type your thoughts...",
-    ai_thinking: "Joy Kumar Biswas is thinking...",
     habit_streak: "Habit Streak",
     tasks_done: "Tasks Done",
     weekly_exp: "Weekly Expense",
@@ -162,7 +151,10 @@ export const translations = {
     work_duration: "Duration (Min/Hrs)",
     skip_game: "Skip the Game",
     web_design: "Web Design",
-    canva_work: "Canva Design"
+    canva_work: "Canva Design",
+    ai_name: "Joy Kumar Biswas",
+    ai_role: "Personal Life Coach",
+    ask_joy: "Ask Joy anything..."
   }
 };
 

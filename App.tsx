@@ -457,7 +457,6 @@ const App: React.FC = () => {
             })()}
           </div>
         </div>
-        {/* Added FloatingAI component to provide real-time coaching assistance */}
         <FloatingAI lang={lang} userName={userName} />
       </main>
     </div>
