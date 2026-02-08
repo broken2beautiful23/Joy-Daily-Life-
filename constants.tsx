@@ -11,11 +11,13 @@ import {
   GraduationCap,
   Briefcase,
   Star,
-  Cpu
+  Cpu,
+  Timer
 } from 'lucide-react';
 
 export const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard size={20} /> },
+  { id: 'worktimer', label: 'ওয়ার্ক টাইমার', icon: <Timer size={20} className="text-orange-500" /> },
   { id: 'profwork', label: 'প্রফেশনাল কাজ', icon: <Cpu size={20} /> },
   { id: 'worklog', label: 'কাজ ও শিখন লগ', icon: <Briefcase size={20} /> },
   { id: 'stories', label: 'মোটিভেশনাল গল্প', icon: <Star size={20} /> },
@@ -44,5 +46,4 @@ export const MOOD_EMOJIS: Record<string, string> = {
   Awful: '😫',
 };
 
-// Fixed: Export AI_AVATAR_URL which was missing and causing compilation error in FloatingAI.tsx
 export const AI_AVATAR_URL = 'https://api.dicebear.com/7.x/bottts/svg?seed=Joy';

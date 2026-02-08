@@ -12,7 +12,8 @@ import {
   Lightbulb,
   CheckCircle2,
   Rocket,
-  ArrowUpRight
+  ArrowUpRight,
+  Clock as ClockIcon
 } from 'lucide-react';
 import { translations, Language } from '../translations';
 import { Transaction } from '../types';
@@ -27,10 +28,17 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId }) => {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const t = translations[lang];
 
   useEffect(() => {
     if (userId) fetchDashboardData();
+    
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, [userId]);
 
   const fetchDashboardData = async () => {
@@ -51,6 +59,21 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId }) => {
       setLoading(false);
     }
   };
+
+  const greeting = useMemo(() => {
+    const hour = currentTime.getHours();
+    if (lang === 'bn') {
+      if (hour < 12) return "শুভ সকাল";
+      if (hour < 16) return "শুভ দুপুর";
+      if (hour < 19) return "শুভ বিকেল";
+      return "শুভ রাত্রি";
+    } else {
+      if (hour < 12) return "Good Morning";
+      if (hour < 16) return "Good Afternoon";
+      if (hour < 19) return "Good Evening";
+      return "Good Night";
+    }
+  }, [currentTime, lang]);
 
   // Process data for the Expenses/Income chart
   const chartData = useMemo(() => {
@@ -107,16 +130,25 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId }) => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20 relative">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight">{t.welcome} {userName}! 👋</h2>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex-1">
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight">{greeting}, {userName}! 👋</h2>
           <p className="text-slate-500 mt-1 font-medium">{t.today_start}</p>
         </div>
-        <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl shadow-sm border border-slate-100">
-          <Calendar className="text-indigo-600" size={20} />
-          <span className="font-bold text-slate-700">
-            {new Date().toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-          </span>
+
+        {/* Real-time Digital Watch Card */}
+        <div className="bg-white/80 backdrop-blur-xl px-8 py-5 rounded-[28px] shadow-2xl shadow-blue-500/10 border border-blue-50 flex items-center gap-6 group hover:scale-105 transition-all duration-500">
+          <div className="w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform">
+            <ClockIcon size={30} />
+          </div>
+          <div>
+            <div className="text-3xl font-black text-slate-900 tabular-nums tracking-tighter">
+              {currentTime.toLocaleTimeString(lang === 'bn' ? 'bn-BD' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mt-0.5">
+              {currentTime.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { weekday: 'long' })}
+            </div>
+          </div>
         </div>
       </header>
 

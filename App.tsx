@@ -12,13 +12,13 @@ import MemoryGallery from './components/MemoryGallery';
 import WorkLog from './components/WorkLog';
 import MotivationalStories from './components/MotivationalStories';
 import ProfessionalWork from './components/ProfessionalWork';
-import FloatingAI from './components/FloatingAI';
+import WorkTimer from './components/WorkTimer';
 import { translations, Language } from './translations';
 import { supabase } from './services/supabase';
 import { 
   Lock, LogOut, Menu, X, Sparkles, Mail, 
   ArrowRight, ShieldCheck, RefreshCw, 
-  User, Palette, Loader2, Eye, EyeOff, Key, ExternalLink, AlertTriangle, Flame, Sun
+  User, Loader2, Eye, EyeOff, Flame, Sun
 } from 'lucide-react';
 
 type AppTheme = 'blue' | 'rose' | 'emerald' | 'dark' | 'naruto' | 'motivational';
@@ -31,7 +31,6 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState<AppTheme>('blue');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [hasApiKey, setHasApiKey] = useState(true);
   const t = translations[lang];
 
   // Auth Form State
@@ -442,6 +441,7 @@ const App: React.FC = () => {
               const props = { lang, userName, userId };
               switch (activeTab) {
                 case 'dashboard': return <Dashboard {...props} />;
+                case 'worktimer': return <WorkTimer {...props} />;
                 case 'profwork': return <ProfessionalWork {...props} />;
                 case 'worklog': return <WorkLog {...props} />;
                 case 'stories': return <MotivationalStories lang={lang} onNavigate={setActiveTab} />;
@@ -457,7 +457,6 @@ const App: React.FC = () => {
             })()}
           </div>
         </div>
-        <FloatingAI lang={lang} userName={userName} />
       </main>
     </div>
   );
