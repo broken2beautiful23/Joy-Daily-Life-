@@ -14,9 +14,9 @@ const Tasks: React.FC<TasksProps> = ({ userId }) => {
   const [category, setCategory] = useState<Task['category']>('Personal');
   const [priority, setPriority] = useState<Task['priority']>('Medium');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const categoryTranslations = { Work: 'কাজ', Personal: 'ব্যক্তিগত', Study: 'পড়াশোনা', Health: 'স্বাস্থ্য' };
-  const priorityTranslations = { Low: 'নিম্ন', Medium: 'মাঝারি', High: 'উচ্চ' };
 
   useEffect(() => {
     if (userId) fetchTasks();
@@ -24,38 +24,57 @@ const Tasks: React.FC<TasksProps> = ({ userId }) => {
 
   const fetchTasks = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('user_id', userId)
-      .order('id', { ascending: false });
-    
-    if (!error && data) {
-      setTasks(data);
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      if (data) setTasks(data);
+    } catch (err: any) {
+      console.error(err.message);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const addTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTask.trim() || !userId) return;
+    if (!newTask.trim()) {
+      alert("কাজের বিবরণ দিন!");
+      return;
+    }
+    if (!userId) {
+      alert("লগইন সেশন পাওয়া যায়নি।");
+      return;
+    }
     
-    const task: Task & { user_id: string } = { 
-      id: `task-${Date.now()}`, 
-      user_id: userId,
-      text: newTask, 
-      completed: false, 
-      category, 
-      priority 
-    };
+    setIsSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert([{ 
+          user_id: userId,
+          text: newTask, 
+          completed: false, 
+          category, 
+          priority 
+        }])
+        .select();
 
-    const { error } = await supabase
-      .from('tasks')
-      .insert([task]);
+      if (error) throw error;
 
-    if (!error) {
-      setTasks(prev => [task, ...prev]);
-      setNewTask('');
+      if (data) {
+        setTasks(prev => [data[0], ...prev]);
+        setNewTask('');
+        alert("কাজটি লিস্টে যোগ করা হয়েছে!");
+      }
+    } catch (err: any) {
+      alert(`ত্রুটি: ${err.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -98,8 +117,21 @@ const Tasks: React.FC<TasksProps> = ({ userId }) => {
 
       <form onSubmit={addTask} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
         <div className="flex gap-4">
-          <input type="text" value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="নতুন কাজ লিখুন..." className="flex-1 text-lg border-none focus:ring-0 outline-none font-bold text-slate-700" autoFocus />
-          <button type="submit" className="bg-indigo-600 text-white p-3 rounded-xl shadow-lg hover:bg-indigo-700 transition-all active:scale-95"><Plus /></button>
+          <input 
+            type="text" 
+            value={newTask} 
+            onChange={(e) => setNewTask(e.target.value)} 
+            placeholder="নতুন কাজ লিখুন..." 
+            className="flex-1 text-lg border-none focus:ring-0 outline-none font-bold text-slate-700" 
+            autoFocus 
+          />
+          <button 
+            type="submit" 
+            disabled={isSaving}
+            className="bg-indigo-600 text-white p-3 rounded-xl shadow-lg hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
+          >
+            {isSaving ? <Loader2 className="animate-spin" size={24} /> : <Plus />}
+          </button>
         </div>
         <div className="flex flex-wrap gap-4 pt-4 border-t border-slate-50">
           <select value={category} onChange={(e) => setCategory(e.target.value as any)} className="text-sm font-semibold text-slate-600 bg-slate-50 border-none rounded-lg px-3 py-1 outline-none">

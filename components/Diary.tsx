@@ -16,6 +16,7 @@ const Diary: React.FC<DiaryProps> = ({ userId }) => {
   const [selectedMood, setSelectedMood] = useState<Mood>(Mood.GOOD);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const moodTranslations: Record<string, string> = {
     Great: 'অসাধারণ',
@@ -31,40 +32,57 @@ const Diary: React.FC<DiaryProps> = ({ userId }) => {
 
   const fetchEntries = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('diary_entries')
-      .select('*')
-      .eq('user_id', userId)
-      .order('date', { ascending: false });
-    
-    if (!error && data) {
-      setEntries(data);
+    try {
+      const { data, error } = await supabase
+        .from('diary_entries')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      if (data) setEntries(data);
+    } catch (err: any) {
+      console.error("Fetch Error:", err.message);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const addEntry = async () => {
-    if (!newContent.trim() || !userId) return;
+    if (!newContent.trim()) {
+      alert("দয়া করে কিছু লিখুন!");
+      return;
+    }
+    if (!userId) {
+      alert("ইউজার সেশন পাওয়া যায়নি। দয়া করে আবার লগইন করুন।");
+      return;
+    }
     
-    const newEntry = {
-      id: Date.now().toString(),
-      user_id: userId,
-      date: new Date().toISOString(),
-      mood: selectedMood,
-      content: newContent,
-      isImportant: false
-    };
+    setIsSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from('diary_entries')
+        .insert([{
+          user_id: userId,
+          date: new Date().toISOString(),
+          mood: selectedMood,
+          content: newContent,
+          isImportant: false
+        }])
+        .select();
 
-    const { error } = await supabase
-      .from('diary_entries')
-      .insert([newEntry]);
+      if (error) throw error;
 
-    if (!error) {
-      setEntries([newEntry, ...entries]);
-      setNewContent('');
-      setIsAdding(false);
-    } else {
-      alert('ডাটা সেভ করতে সমস্যা হয়েছে।');
+      if (data) {
+        setEntries([data[0], ...entries]);
+        setNewContent('');
+        setIsAdding(false);
+        alert("ডায়েরি সফলভাবে সেভ হয়েছে!");
+      }
+    } catch (err: any) {
+      alert(`সেভ করতে সমস্যা হয়েছে: ${err.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -78,6 +96,8 @@ const Diary: React.FC<DiaryProps> = ({ userId }) => {
 
       if (!error) {
         setEntries(entries.filter(e => e.id !== id));
+      } else {
+        alert("মুছতে সমস্যা হয়েছে।");
       }
     }
   };
@@ -111,7 +131,14 @@ const Diary: React.FC<DiaryProps> = ({ userId }) => {
           </div>
           <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)} placeholder="আজ কি হলো? আপনার মনের কথা লিখুন..." className="w-full h-48 p-6 bg-slate-50 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 border-none outline-none resize-none text-slate-700 leading-relaxed text-lg" />
           <div className="mt-6 flex justify-end">
-            <button onClick={addEntry} className="bg-indigo-600 text-white font-bold py-3 px-10 rounded-xl hover:bg-indigo-700 shadow-md">গল্পটি সেভ করুন</button>
+            <button 
+              onClick={addEntry} 
+              disabled={isSaving}
+              className="bg-indigo-600 text-white font-bold py-3 px-10 rounded-xl hover:bg-indigo-700 shadow-md flex items-center gap-2 disabled:opacity-50"
+            >
+              {isSaving && <Loader2 className="animate-spin" size={18} />}
+              {isSaving ? 'সেভ হচ্ছে...' : 'গল্পটি সেভ করুন'}
+            </button>
           </div>
         </div>
       )}
