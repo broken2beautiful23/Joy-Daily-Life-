@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   MessageSquare, Send, X, UserCheck, Loader2, Sparkles, 
-  Minimize2, Volume2, VolumeX, Mic, MicOff, AlertCircle 
+  Minimize2, Volume2, VolumeX, Mic, MicOff, AlertCircle, Key
 } from 'lucide-react';
 import { chatWithJoy, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -74,6 +74,13 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     }
   };
 
+  const handleSelectKey = async () => {
+    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+      await window.aistudio.openSelectKey();
+      setError(null);
+    }
+  };
+
   const playAudioResponse = async (text: string) => {
     if (!isVoiceEnabled) return;
 
@@ -123,14 +130,20 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
       const response = await chatWithJoy(userMsg, { userName });
       setMessages(prev => [...prev, { role: 'joy', text: response }]);
       
-      // AI কথা বলা শুরু করবে
       if (isVoiceEnabled) {
         await playAudioResponse(response);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Chat Error:", error);
-      setError(lang === 'bn' ? "কানেকশনে সমস্যা হচ্ছে।" : "Connection problem.");
-      setMessages(prev => [...prev, { role: 'joy', text: "দুঃখিত, বর্তমানে আমার সাথে সংযোগ স্থাপন করা সম্ভব হচ্ছে না। দয়া করে আবার চেষ্টা করুন।" }]);
+      const isKeyError = error.message?.includes("Requested entity was not found") || error.message?.includes("API key");
+      
+      if (isKeyError) {
+        setError(lang === 'bn' ? "এপিআই কী পাওয়া যায়নি। দয়া করে কী সিলেক্ট করুন।" : "API Key missing. Please select a key.");
+      } else {
+        setError(lang === 'bn' ? "কানেকশনে সমস্যা হচ্ছে।" : "Connection problem.");
+      }
+      
+      setMessages(prev => [...prev, { role: 'joy', text: lang === 'bn' ? "দুঃখিত, বর্তমানে আমার সাথে সংযোগ স্থাপন করা সম্ভব হচ্ছে না।" : "Sorry, I'm having trouble connecting right now." }]);
     } finally {
       setIsTyping(false);
     }
@@ -138,10 +151,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
   return (
     <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end">
-      {/* Chat Window */}
       {isOpen && (
         <div className="mb-4 w-[350px] md:w-[400px] h-[600px] bg-white rounded-[32px] shadow-2xl border border-blue-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
-          {/* Header */}
           <div className="p-5 bg-blue-600 text-white flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center border border-white/20">
@@ -166,7 +177,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
             </div>
           </div>
 
-          {/* Messages */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50 custom-scrollbar">
             {messages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 opacity-40">
@@ -205,14 +215,19 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
             )}
           </div>
 
-          {/* Error Message */}
           {error && (
-            <div className="mx-4 mb-2 p-3 bg-red-50 text-red-500 rounded-xl text-[10px] font-bold flex items-center gap-2 border border-red-100">
-              <AlertCircle size={14} /> {error}
+            <div className="mx-4 mb-2 p-3 bg-amber-50 text-amber-700 rounded-xl text-[10px] font-bold flex flex-col gap-2 border border-amber-100">
+              <div className="flex items-center gap-2">
+                <AlertCircle size={14} /> {error}
+              </div>
+              {error.includes("কী") && (
+                <button onClick={handleSelectKey} className="w-full py-2 bg-amber-600 text-white rounded-lg flex items-center justify-center gap-2">
+                  <Key size={12} /> কী সিলেক্ট করুন
+                </button>
+              )}
             </div>
           )}
 
-          {/* Input Area */}
           <div className="p-4 bg-white border-t border-slate-100">
             <div className="flex items-center gap-2">
               <button 
@@ -246,7 +261,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         </div>
       )}
 
-      {/* Toggle Button */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className={`w-16 h-16 rounded-[24px] shadow-2xl flex items-center justify-center text-white transition-all hover:scale-110 active:scale-95 group relative ${

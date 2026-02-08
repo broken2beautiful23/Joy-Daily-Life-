@@ -19,7 +19,7 @@ export async function generateDailySummary(data: any) {
   try {
     const response = await ai.models.generateContent({
       model,
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.7,
@@ -44,7 +44,7 @@ export async function chatWithJoy(userMessage: string, userData: any) {
   try {
     const response = await ai.models.generateContent({
       model,
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.8,
@@ -67,7 +67,7 @@ export async function speakText(text: string): Promise<string | null> {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Kore' }, // Kore is a warm voice
+            prebuiltVoiceConfig: { voiceName: 'Kore' },
           },
         },
       },

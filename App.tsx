@@ -19,7 +19,7 @@ import { supabase } from './services/supabase';
 import { 
   Lock, LogOut, Menu, X, Sparkles, Mail, 
   ArrowRight, ShieldCheck, RefreshCw, 
-  User, Palette, Loader2, Eye, EyeOff
+  User, Palette, Loader2, Eye, EyeOff, Key
 } from 'lucide-react';
 
 type AppTheme = 'blue' | 'rose' | 'emerald' | 'dark';
@@ -32,6 +32,7 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState<AppTheme>('blue');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [hasApiKey, setHasApiKey] = useState(true);
   const t = translations[lang];
 
   // Auth Form State
@@ -47,6 +48,14 @@ const App: React.FC = () => {
   const [userName, setUserName] = useState('ইউজার');
 
   useEffect(() => {
+    const checkApiKey = async () => {
+      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
+        const has = await window.aistudio.hasSelectedApiKey();
+        setHasApiKey(has);
+      }
+    };
+    checkApiKey();
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setIsAuthenticated(true);
@@ -76,6 +85,13 @@ const App: React.FC = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const handleSelectKey = async () => {
+    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+      await window.aistudio.openSelectKey();
+      setHasApiKey(true);
+    }
+  };
 
   const changeTheme = (newTheme: AppTheme) => {
     setTheme(newTheme);
@@ -397,6 +413,11 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
+             {!hasApiKey && (
+               <button onClick={handleSelectKey} className="flex items-center gap-2 bg-amber-100 text-amber-700 px-4 py-2 rounded-xl text-xs font-black shadow-sm border border-amber-200 animate-pulse">
+                 <Key size={14} /> <span>API কী সিলেক্ট করুন</span>
+               </button>
+             )}
              <div className="flex gap-1 bg-white p-1 rounded-xl border border-blue-50">
                 {(['blue', 'rose', 'emerald', 'dark'] as AppTheme[]).map(th => (
                   <button key={th} onClick={() => changeTheme(th)} className={`w-6 h-6 rounded-lg ${th === 'blue' ? 'bg-blue-500' : th === 'rose' ? 'bg-rose-500' : th === 'emerald' ? 'bg-emerald-500' : 'bg-slate-800'} ${theme === th ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`} />
