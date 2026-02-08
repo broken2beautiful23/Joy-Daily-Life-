@@ -1,11 +1,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  MessageSquare, Send, X, UserCheck, Loader2, Sparkles, 
+  Send, X, Loader2, Sparkles, 
   Minimize2, Volume2, VolumeX, Mic, MicOff, AlertCircle, Key, ExternalLink, RefreshCw
 } from 'lucide-react';
 import { chatWithJoy, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
+import { AI_AVATAR_URL } from '../constants';
 
 interface FloatingAIProps {
   lang: Language;
@@ -79,7 +80,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
       try {
         await window.aistudio.openSelectKey();
         setError(null);
-        // GUIDELINE: Assume success after triggering to mitigate race conditions
         setTimeout(() => {
           if (messages.length > 0 && messages[messages.length-1].role === 'user') {
             handleSendMessage();
@@ -150,8 +150,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     } catch (error: any) {
       console.error("Chat Error:", error);
       const errorMsg = error.message?.toLowerCase() || "";
-      
-      // GUIDELINE: Detect "Requested entity was not found" or key errors
       const isEntityNotFoundError = errorMsg.includes("requested entity was not found") || errorMsg.includes("404");
       const isUnauthorizedError = errorMsg.includes("api key") || errorMsg.includes("unauthorized") || errorMsg.includes("invalid_argument") || errorMsg.includes("key not found");
       
@@ -176,8 +174,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         <div className="mb-4 w-[350px] md:w-[400px] h-[600px] bg-white rounded-[32px] shadow-2xl border border-blue-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
           <div className="p-5 bg-blue-600 text-white flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center border border-white/20">
-                <UserCheck size={20} />
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center border border-white/20 overflow-hidden">
+                <img src={AI_AVATAR_URL} alt="Joy" className="w-full h-full object-cover scale-110" />
               </div>
               <div>
                 <h4 className="font-black text-sm leading-tight">{t.ai_name}</h4>
@@ -202,7 +200,9 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
             {messages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 opacity-40">
                 <div className="relative mb-6">
-                  <Sparkles size={48} className="text-blue-400" />
+                  <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-2xl border-4 border-white rotate-3">
+                     <img src={AI_AVATAR_URL} alt="Joy" className="w-full h-full object-cover" />
+                  </div>
                   <div className="absolute inset-0 bg-blue-400 blur-2xl opacity-20 animate-pulse"></div>
                 </div>
                 <p className="text-sm font-bold leading-relaxed text-slate-600 px-4">
@@ -297,17 +297,19 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
       {/* Toggle Button */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-16 h-16 rounded-[24px] shadow-2xl flex items-center justify-center text-white transition-all hover:scale-110 active:scale-95 group relative ${
+        className={`w-16 h-16 rounded-[24px] shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 group relative overflow-hidden ${
           isOpen ? 'bg-slate-900 rotate-90' : 'blue-btn shadow-blue-400/30'
         }`}
       >
         {!isOpen && (
-          <div className="absolute -top-1 -right-1 flex">
+          <div className="absolute -top-1 -right-1 z-10">
             <div className="w-5 h-5 bg-emerald-500 rounded-full border-4 border-white"></div>
             <div className="absolute -inset-1 bg-emerald-500 rounded-full opacity-50 animate-ping"></div>
           </div>
         )}
-        {isOpen ? <X size={24} /> : <MessageSquare size={28} />}
+        {isOpen ? <X size={24} className="text-white" /> : (
+          <img src={AI_AVATAR_URL} alt="Joy" className="w-full h-full object-cover scale-110" />
+        )}
       </button>
     </div>
   );

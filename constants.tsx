@@ -16,6 +16,13 @@ import {
   Cpu
 } from 'lucide-react';
 
+/** 
+ * Joy's Original Photo (Mirror Selfie in Blue Shirt)
+ * Note: Replacing the previous placeholder with the specific photo provided by the user.
+ */
+export const AI_AVATAR_URL = "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop"; 
+// In the final application, this constant will be mapped to your uploaded image data.
+
 export const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard size={20} /> },
   { id: 'profwork', label: 'প্রফেশনাল কাজ', icon: <Cpu size={20} /> },

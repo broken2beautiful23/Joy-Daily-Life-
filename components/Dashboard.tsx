@@ -10,7 +10,6 @@ import {
   Calendar,
   TrendingDown,
   BrainCircuit,
-  UserCheck,
   Send,
   Loader2,
   X,
@@ -20,6 +19,7 @@ import { generateDailySummary, chatWithJoy } from '../services/gemini';
 import { translations, Language } from '../translations';
 import { Transaction } from '../types';
 import { supabase } from '../services/supabase';
+import { AI_AVATAR_URL } from '../constants';
 
 interface DashboardProps {
   lang: Language;
@@ -32,8 +32,6 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId }) => {
   const [loading, setLoading] = useState(true);
   const [chatInput, setChatInput] = useState('');
   const [isChatting, setIsChatting] = useState(false);
-  const [isFloatingOpen, setIsFloatingOpen] = useState(false);
-  const [floatingChatInput, setFloatingChatInput] = useState('');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const t = translations[lang];
 
@@ -43,7 +41,6 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId }) => {
 
   const fetchDashboardData = async () => {
     setLoading(true);
-    // Fetch transactions from Supabase filtered by userId
     const { data: tx, error } = await supabase
       .from('transactions')
       .select('*')
@@ -64,18 +61,22 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId }) => {
     setLoading(false);
   };
 
-  const handleChat = async (e: React.FormEvent, input: string, isFloating: boolean) => {
+  const handleChat = async (e: React.FormEvent, input: string) => {
     e.preventDefault();
     if (!input.trim() || isChatting) return;
 
     const msg = input;
-    if (isFloating) setFloatingChatInput('');
-    else setChatInput('');
-    
+    setChatInput('');
     setIsChatting(true);
-    const response = await chatWithJoy(msg, { userName, transactions });
-    setAiInsight(response || "");
-    setIsChatting(false);
+    
+    try {
+      const response = await chatWithJoy(msg, { userName, transactions });
+      setAiInsight(response || "");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsChatting(false);
+    }
   };
 
   const totalIncome = transactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
@@ -150,8 +151,11 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId }) => {
           
           <div className="relative z-10 flex-1 flex flex-col">
             <div className="flex items-center gap-4 mb-8">
-              <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/30 shadow-inner">
-                <UserCheck size={28} />
+              <div className="relative">
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/30 shadow-inner overflow-hidden">
+                  <img src={AI_AVATAR_URL} alt="Joy" className="w-full h-full object-cover" />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-indigo-600"></div>
               </div>
               <div>
                 <p className="text-[10px] font-black tracking-[0.2em] uppercase opacity-70">{t.ai_assistant}</p>
@@ -183,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId }) => {
                 {isChatting && <Loader2 className="animate-spin opacity-50" size={14} />}
               </div>
               
-              <form onSubmit={(e) => handleChat(e, chatInput, false)} className="relative group">
+              <form onSubmit={(e) => handleChat(e, chatInput)} className="relative group">
                 <input 
                   type="text" 
                   value={chatInput}
