@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Transaction } from '../types';
-import { Plus, Trash2, Search, TrendingDown, TrendingUp, X, Wallet, Loader2 } from 'lucide-react';
+import { Plus, Trash2, TrendingDown, TrendingUp, X, Loader2 } from 'lucide-react';
 import { translations, Language } from '../translations';
 import { supabase } from '../services/supabase';
 
@@ -43,9 +43,6 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
         .select('*')
         .order('date', { ascending: false });
       
-      // If user_id filtering causes issues because the column is missing, 
-      // we can try fetching all but it's better to fix the schema.
-      // For now, let's keep it simple.
       if (error) throw error;
       if (data) setTransactions(data);
     } catch (err: any) {
@@ -63,10 +60,9 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
     
     setIsSaving(true);
     try {
-      // We send user_id because it is essential for RLS and multi-user apps.
-      // If you get "Could not find user_id column", please add it to your table in Supabase.
-      const payload = {
-        user_id: userId, // Ensure this column exists in your Supabase 'transactions' table
+      // We try to include user_id. If the column is missing in DB, this will fail
+      // but the user will get a clear message based on your screenshot error.
+      const payload: any = {
         date: new Date().toISOString(), 
         amount: parseFloat(amount), 
         type, 
@@ -74,18 +70,18 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
         note 
       };
 
+      // Add user_id only if it's available
+      if (userId) {
+        payload.user_id = userId;
+      }
+
       const { data, error } = await supabase
         .from('transactions')
         .insert([payload])
         .select();
 
       if (error) {
-        // More descriptive error for the specific issue seen in screenshot
-        if (error.message.includes("user_id")) {
-          throw new Error(lang === 'bn' 
-            ? "ডাটাবেসে 'user_id' কলামটি পাওয়া যায়নি। দয়া করে সুপাবেস ড্যাশবোর্ড চেক করুন।" 
-            : "The 'user_id' column is missing in your transactions table.");
-        }
+        console.error("Supabase Error:", error);
         throw error;
       }
 
@@ -94,10 +90,17 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
         setAmount('');
         setNote('');
         setShowAdd(false);
-        alert(lang === 'bn' ? "লেনদেন সফলভাবে যোগ করা হয়েছে!" : "Transaction added successfully!");
+        alert(lang === 'bn' ? "সফলভাবে সেভ হয়েছে!" : "Saved successfully!");
       }
     } catch (err: any) {
-      alert(lang === 'bn' ? `ত্রুটি: ${err.message}` : `Error: ${err.message}`);
+      const errorMsg = err.message || "Unknown error";
+      if (errorMsg.includes("user_id")) {
+        alert(lang === 'bn' 
+          ? "আপনার সুপাবেস ডাটাবেসে 'user_id' কলামটি নেই। দয়া করে ড্যাশবোর্ড থেকে কলামটি যোগ করুন।" 
+          : "The 'user_id' column is missing in your Supabase table. Please add it via Supabase Dashboard.");
+      } else {
+        alert(lang === 'bn' ? `ত্রুটি: ${errorMsg}` : `Error: ${errorMsg}`);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -108,8 +111,6 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
       const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (!error) {
         setTransactions(transactions.filter(t => t.id !== id));
-      } else {
-        alert("Failed to delete.");
       }
     }
   };
@@ -151,7 +152,7 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
             <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest">{lang === 'bn' ? 'সাম্প্রতিক লেনদেন' : 'Recent Transactions'}</h3>
             {isLoading && <Loader2 size={16} className="animate-spin text-indigo-500" />}
           </div>
-          <div className="divide-y divide-slate-50 overflow-y-auto max-h-[600px] custom-scrollbar">
+          <div className="divide-y divide-slate-50 max-h-[500px] overflow-y-auto custom-scrollbar">
             {transactions.map((tx) => (
               <div key={tx.id} className="p-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
                 <div className="flex items-center gap-4">
@@ -177,45 +178,28 @@ const Expenses: React.FC<ExpensesProps> = ({ lang, userId }) => {
           </div>
         </div>
 
-        <div className={`transition-all duration-300 ${showAdd ? 'opacity-100' : 'opacity-0 pointer-events-none absolute lg:static'}`}>
+        {showAdd && (
           <div className="bg-white p-8 rounded-3xl border-2 border-indigo-500 shadow-2xl space-y-6">
-            <h3 className="text-xl font-black text-slate-800 border-b pb-4">{t.add_transaction}</h3>
+            <h3 className="text-xl font-black text-slate-800">{t.add_transaction}</h3>
             <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400">পরিমাণ</label>
-                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-5 font-black text-2xl text-indigo-600" placeholder="0.00" autoFocus />
-              </div>
-              
+              <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-5 font-black text-2xl text-indigo-600" placeholder="0.00" autoFocus />
               <div className="flex gap-2">
-                 <button onClick={() => setType('income')} className={`flex-1 py-3 rounded-xl font-black transition-all ${type === 'income' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}>{lang === 'bn' ? 'আয়' : 'Income'}</button>
-                 <button onClick={() => setType('expense')} className={`flex-1 py-3 rounded-xl font-black transition-all ${type === 'expense' ? 'bg-rose-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}>{lang === 'bn' ? 'ব্যয়' : 'Expense'}</button>
+                 <button onClick={() => setType('income')} className={`flex-1 py-3 rounded-xl font-black transition-all ${type === 'income' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400'}`}>{lang === 'bn' ? 'আয়' : 'Income'}</button>
+                 <button onClick={() => setType('expense')} className={`flex-1 py-3 rounded-xl font-black transition-all ${type === 'expense' ? 'bg-rose-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400'}`}>{lang === 'bn' ? 'ব্যয়' : 'Expense'}</button>
               </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400">খাত</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-5 font-bold outline-none focus:ring-2 focus:ring-indigo-100">
-                  {categories[type].map(c => (
-                    <option key={c} value={c}>{lang === 'bn' ? catTranslations[c] || c : c}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400">নোট</label>
-                <input type="text" value={note} onChange={(e) => setNote(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-5 font-bold" placeholder={lang === 'bn' ? "বিকাশ / নগদ / হাতে" : "Note..."} />
-              </div>
-
-              <button 
-                onClick={addTransaction} 
-                disabled={isSaving}
-                className="w-full blue-btn text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 shadow-xl disabled:opacity-50 mt-4"
-              >
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-5 font-bold outline-none">
+                {categories[type].map(c => (
+                  <option key={c} value={c}>{lang === 'bn' ? catTranslations[c] || c : c}</option>
+                ))}
+              </select>
+              <input type="text" value={note} onChange={(e) => setNote(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-5 font-bold" placeholder={lang === 'bn' ? "নোট (বিকাশ/নগদ/হাতে)" : "Note..."} />
+              <button onClick={addTransaction} disabled={isSaving} className="w-full blue-btn text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 shadow-xl disabled:opacity-50">
                 {isSaving ? <Loader2 className="animate-spin" size={24} /> : <Plus size={24} />}
                 <span>{isSaving ? (lang === 'bn' ? "সেভ হচ্ছে..." : "Saving...") : t.save_transaction}</span>
               </button>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
