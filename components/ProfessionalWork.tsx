@@ -6,6 +6,7 @@ import { supabase } from '../services/supabase';
 
 interface ProfLog {
   id: string;
+  user_id: string;
   type: 'skip' | 'web' | 'canva';
   duration: string;
   date: string;
@@ -14,9 +15,10 @@ interface ProfLog {
 
 interface ProfessionalWorkProps {
   lang: Language;
+  userId: string;
 }
 
-const ProfessionalWork: React.FC<ProfessionalWorkProps> = ({ lang }) => {
+const ProfessionalWork: React.FC<ProfessionalWorkProps> = ({ lang, userId }) => {
   const [logs, setLogs] = useState<ProfLog[]>([]);
   const [selectedType, setSelectedType] = useState<'skip' | 'web' | 'canva'>('web');
   const [duration, setDuration] = useState('');
@@ -25,20 +27,25 @@ const ProfessionalWork: React.FC<ProfessionalWorkProps> = ({ lang }) => {
   const t = translations[lang];
 
   useEffect(() => {
-    fetchLogs();
-  }, []);
+    if (userId) fetchLogs();
+  }, [userId]);
 
   const fetchLogs = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase.from('prof_logs').select('*').order('date', { ascending: false });
+    const { data, error } = await supabase
+      .from('prof_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
     if (!error && data) setLogs(data);
     setIsLoading(false);
   };
 
   const addLog = async () => {
-    if (!duration.trim()) return;
+    if (!duration.trim() || !userId) return;
     const newLog = {
       id: `prof-${Date.now()}`,
+      user_id: userId,
       type: selectedType,
       duration,
       date: new Date().toISOString(),
@@ -53,8 +60,12 @@ const ProfessionalWork: React.FC<ProfessionalWorkProps> = ({ lang }) => {
   };
 
   const deleteLog = async (id: string) => {
-    if (window.confirm('আপনি কি নিশ্চিত যে এই রেকর্ডটি মুছে ফেলতে চান?')) {
-      const { error } = await supabase.from('prof_logs').delete().eq('id', id);
+    if (window.confirm('আপনি কি নিশ্চিত যে এই রেকর্ডটি মুছে ফেলতে চান?') && userId) {
+      const { error } = await supabase
+        .from('prof_logs')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
       if (!error) setLogs(logs.filter(l => l.id !== id));
     }
   };

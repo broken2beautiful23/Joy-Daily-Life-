@@ -5,13 +5,18 @@ import { supabase } from '../services/supabase';
 
 interface Goal {
   id: string;
+  user_id: string;
   title: string;
   category: string;
   progress: number;
   targetDate: string;
 }
 
-const Goals: React.FC = () => {
+interface GoalsProps {
+  userId: string;
+}
+
+const Goals: React.FC<GoalsProps> = ({ userId }) => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -20,20 +25,24 @@ const Goals: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    fetchGoals();
-  }, []);
+    if (userId) fetchGoals();
+  }, [userId]);
 
   const fetchGoals = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase.from('joy_goals').select('*');
+    const { data, error } = await supabase
+      .from('joy_goals')
+      .select('*')
+      .eq('user_id', userId);
     if (!error && data) setGoals(data);
     setIsLoading(false);
   };
 
   const addGoal = async () => {
-    if (!newTitle.trim()) return;
+    if (!newTitle.trim() || !userId) return;
     const goal = {
       id: `goal-${Date.now()}`,
+      user_id: userId,
       title: newTitle,
       category: newCategory,
       progress: 0,
@@ -48,16 +57,25 @@ const Goals: React.FC = () => {
   };
 
   const updateProgress = async (id: string, current: number) => {
+    if (!userId) return;
     const newVal = prompt('নতুন প্রগ্রেস লিখুন (০-১০০):', current.toString());
     if (newVal === null) return;
     const progress = Math.min(100, Math.max(0, parseInt(newVal) || 0));
-    const { error } = await supabase.from('joy_goals').update({ progress }).eq('id', id);
+    const { error } = await supabase
+      .from('joy_goals')
+      .update({ progress })
+      .eq('id', id)
+      .eq('user_id', userId);
     if (!error) setGoals(goals.map(g => g.id === id ? { ...g, progress } : g));
   };
 
   const deleteGoal = async (id: string) => {
-    if (window.confirm('এই লক্ষ্যটি কি চিরতরে মুছে ফেলতে চান?')) {
-      const { error } = await supabase.from('joy_goals').delete().eq('id', id);
+    if (window.confirm('এই লক্ষ্যটি কি চিরতরে মুছে ফেলতে চান?') && userId) {
+      const { error } = await supabase
+        .from('joy_goals')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
       if (!error) setGoals(goals.filter(g => g.id !== id));
     }
   };

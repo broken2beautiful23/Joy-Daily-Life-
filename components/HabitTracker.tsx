@@ -4,7 +4,11 @@ import { Habit } from '../types';
 import { Plus, Flame, Check, Trash2, Loader2 } from 'lucide-react';
 import { supabase } from '../services/supabase';
 
-const HabitTracker: React.FC = () => {
+interface HabitTrackerProps {
+  userId: string;
+}
+
+const HabitTracker: React.FC<HabitTrackerProps> = ({ userId }) => {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [newHabitName, setNewHabitName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -19,20 +23,24 @@ const HabitTracker: React.FC = () => {
   const weekDayNames = { 0: 'রবি', 1: 'সোম', 2: 'মঙ্গল', 3: 'বুধ', 4: 'বৃহস্প', 5: 'শুক্র', 6: 'শনি' };
 
   useEffect(() => {
-    fetchHabits();
-  }, []);
+    if (userId) fetchHabits();
+  }, [userId]);
 
   const fetchHabits = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase.from('habits').select('*');
+    const { data, error } = await supabase
+      .from('habits')
+      .select('*')
+      .eq('user_id', userId);
     if (!error && data) setHabits(data);
     setIsLoading(false);
   };
 
   const addHabit = async () => {
-    if (!newHabitName.trim()) return;
+    if (!newHabitName.trim() || !userId) return;
     const newHabit = { 
       id: `habit-${Date.now()}`, 
+      user_id: userId,
       name: newHabitName, 
       completedDates: [], 
       streak: 0, 
@@ -54,7 +62,11 @@ const HabitTracker: React.FC = () => {
       ? habit.completedDates.filter(d => d !== date) 
       : [...habit.completedDates, date];
 
-    const { error } = await supabase.from('habits').update({ completedDates: newDates }).eq('id', habitId);
+    const { error } = await supabase
+      .from('habits')
+      .update({ completedDates: newDates })
+      .eq('id', habitId)
+      .eq('user_id', userId);
     if (!error) {
       setHabits(habits.map(h => h.id === habitId ? { ...h, completedDates: newDates } : h));
     }
@@ -62,7 +74,11 @@ const HabitTracker: React.FC = () => {
 
   const deleteHabit = async (id: string) => {
     if (window.confirm('এই অভ্যাসটি কি ডিলিট করতে চান?')) {
-      const { error } = await supabase.from('habits').delete().eq('id', id);
+      const { error } = await supabase
+        .from('habits')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
       if (!error) setHabits(habits.filter(h => h.id !== id));
     }
   };

@@ -4,7 +4,11 @@ import { Note } from '../types';
 import { Plus, StickyNote, Trash2, Edit3, Loader2 } from 'lucide-react';
 import { supabase } from '../services/supabase';
 
-const Notes: React.FC = () => {
+interface NotesProps {
+  userId: string;
+}
+
+const Notes: React.FC<NotesProps> = ({ userId }) => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -12,19 +16,25 @@ const Notes: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    fetchNotes();
-  }, []);
+    if (userId) fetchNotes();
+  }, [userId]);
 
   const fetchNotes = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase.from('notes').select('*').order('updatedAt', { ascending: false });
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updatedAt', { ascending: false });
     if (!error && data) setNotes(data);
     setIsLoading(false);
   };
 
   const createNote = async () => {
+    if (!userId) return;
     const newNote = { 
       id: `note-${Date.now()}`, 
+      user_id: userId,
       title: 'নতুন নোট', 
       content: '', 
       updatedAt: new Date().toISOString() 
@@ -43,13 +53,17 @@ const Notes: React.FC = () => {
   };
 
   const saveEdit = async () => {
-    if (!editingId) return;
+    if (!editingId || !userId) return;
     const updatedAt = new Date().toISOString();
-    const { error } = await supabase.from('notes').update({ 
-      title: editTitle, 
-      content: editContent, 
-      updatedAt 
-    }).eq('id', editingId);
+    const { error } = await supabase
+      .from('notes')
+      .update({ 
+        title: editTitle, 
+        content: editContent, 
+        updatedAt 
+      })
+      .eq('id', editingId)
+      .eq('user_id', userId);
 
     if (!error) {
       setNotes(notes.map(n => n.id === editingId ? { ...n, title: editTitle, content: editContent, updatedAt } : n));
@@ -59,7 +73,11 @@ const Notes: React.FC = () => {
 
   const deleteNote = async (id: string) => {
     if (window.confirm('আপনি কি নিশ্চিত যে এই নোটটি ডিলিট করতে চান?')) {
-      const { error } = await supabase.from('notes').delete().eq('id', id);
+      const { error } = await supabase
+        .from('notes')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
       if (!error) setNotes(notes.filter(n => n.id !== id));
     }
   };

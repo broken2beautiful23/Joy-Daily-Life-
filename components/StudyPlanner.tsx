@@ -5,13 +5,18 @@ import { supabase } from '../services/supabase';
 
 interface StudySession {
   id: string;
+  user_id: string;
   subject: string;
   duration: string;
   topic: string;
   done: boolean;
 }
 
-const StudyPlanner: React.FC = () => {
+interface StudyPlannerProps {
+  userId: string;
+}
+
+const StudyPlanner: React.FC<StudyPlannerProps> = ({ userId }) => {
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [subject, setSubject] = useState('');
@@ -20,20 +25,24 @@ const StudyPlanner: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    fetchSessions();
-  }, []);
+    if (userId) fetchSessions();
+  }, [userId]);
 
   const fetchSessions = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase.from('study_sessions').select('*');
+    const { data, error } = await supabase
+      .from('study_sessions')
+      .select('*')
+      .eq('user_id', userId);
     if (!error && data) setSessions(data);
     setIsLoading(false);
   };
 
   const addSession = async () => {
-    if (!subject.trim()) return;
+    if (!subject.trim() || !userId) return;
     const newSession = {
       id: `study-${Date.now()}`,
+      user_id: userId,
       subject,
       duration: duration || 'অনির্দিষ্ট সময়',
       topic: topic || 'জেনারেল স্টাডি',
@@ -48,15 +57,24 @@ const StudyPlanner: React.FC = () => {
   };
 
   const toggleDone = async (id: string, currentStatus: boolean) => {
-    const { error } = await supabase.from('study_sessions').update({ done: !currentStatus }).eq('id', id);
+    if (!userId) return;
+    const { error } = await supabase
+      .from('study_sessions')
+      .update({ done: !currentStatus })
+      .eq('id', id)
+      .eq('user_id', userId);
     if (!error) {
       setSessions(sessions.map(s => s.id === id ? { ...s, done: !currentStatus } : s));
     }
   };
 
   const deleteSession = async (id: string) => {
-    if (window.confirm('এই সেশনটি ডিলিট করতে চান?')) {
-      const { error } = await supabase.from('study_sessions').delete().eq('id', id);
+    if (window.confirm('এই সেশনটি ডিলিট করতে চান?') && userId) {
+      const { error } = await supabase
+        .from('study_sessions')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
       if (!error) setSessions(sessions.filter(s => s.id !== id));
     }
   };

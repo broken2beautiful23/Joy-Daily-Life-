@@ -4,19 +4,24 @@ import { Memory } from '../types';
 import { Camera, Trash2, Heart, Loader2 } from 'lucide-react';
 import { supabase } from '../services/supabase';
 
-const MemoryGallery: React.FC = () => {
+interface MemoryGalleryProps {
+  userId: string;
+}
+
+const MemoryGallery: React.FC<MemoryGalleryProps> = ({ userId }) => {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    fetchMemories();
-  }, []);
+    if (userId) fetchMemories();
+  }, [userId]);
 
   const fetchMemories = async () => {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('memories')
       .select('*')
+      .eq('user_id', userId)
       .order('date', { ascending: false });
     if (!error && data) setMemories(data);
     setIsLoading(false);
@@ -24,12 +29,13 @@ const MemoryGallery: React.FC = () => {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !userId) return;
 
     const reader = new FileReader();
     reader.onloadend = async () => {
       const newMemory = { 
         id: `mem-${Date.now()}`, 
+        user_id: userId,
         url: reader.result as string, 
         caption: 'নতুন স্মৃতি', 
         date: new Date().toISOString() 
@@ -45,7 +51,11 @@ const MemoryGallery: React.FC = () => {
 
   const deleteMemory = async (id: string) => {
     if (window.confirm('আপনি কি নিশ্চিত যে এই ছবিটি ডিলিট করতে চান?')) {
-      const { error } = await supabase.from('memories').delete().eq('id', id);
+      const { error } = await supabase
+        .from('memories')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
       if (!error) {
         setMemories(memories.filter(m => m.id !== id));
       }

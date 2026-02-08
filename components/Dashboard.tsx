@@ -24,9 +24,10 @@ import { supabase } from '../services/supabase';
 interface DashboardProps {
   lang: Language;
   userName: string;
+  userId: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ lang, userName }) => {
+const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId }) => {
   const [aiInsight, setAiInsight] = useState('');
   const [loading, setLoading] = useState(true);
   const [chatInput, setChatInput] = useState('');
@@ -37,15 +38,16 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName }) => {
   const t = translations[lang];
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [userName]);
+    if (userId) fetchDashboardData();
+  }, [userId, userName]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
-    // Fetch transactions from Supabase instead of localStorage
+    // Fetch transactions from Supabase filtered by userId
     const { data: tx, error } = await supabase
       .from('transactions')
       .select('*')
+      .eq('user_id', userId)
       .order('date', { ascending: false });
 
     if (!error && tx) {
@@ -55,6 +57,9 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName }) => {
         finance: `Income: ${tx.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0)}, Expense: ${tx.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0)}`
       });
       setAiInsight(summary || "");
+    } else {
+      setTransactions([]);
+      setAiInsight(lang === 'bn' ? "আপনার আজকের নতুন যাত্রা শুরু করুন! - জয় কুমার বিশ্বাস" : "Start your journey today! - Joy Kumar Biswas");
     }
     setLoading(false);
   };

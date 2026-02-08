@@ -6,6 +6,7 @@ import { supabase } from '../services/supabase';
 
 interface WorkLogEntry {
   id: string;
+  user_id: string;
   date: string;
   title: string;
   hours: number;
@@ -14,9 +15,10 @@ interface WorkLogEntry {
 
 interface WorkLogProps {
   lang: Language;
+  userId: string;
 }
 
-const WorkLog: React.FC<WorkLogProps> = ({ lang }) => {
+const WorkLog: React.FC<WorkLogProps> = ({ lang, userId }) => {
   const [logs, setLogs] = useState<WorkLogEntry[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [title, setTitle] = useState('');
@@ -26,20 +28,25 @@ const WorkLog: React.FC<WorkLogProps> = ({ lang }) => {
   const t = translations[lang];
 
   useEffect(() => {
-    fetchLogs();
-  }, []);
+    if (userId) fetchLogs();
+  }, [userId]);
 
   const fetchLogs = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase.from('work_logs').select('*').order('date', { ascending: false });
+    const { data, error } = await supabase
+      .from('work_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
     if (!error && data) setLogs(data);
     setIsLoading(false);
   };
 
   const addLog = async () => {
-    if (!title || !hours) return;
+    if (!title || !hours || !userId) return;
     const newLog = {
       id: `log-${Date.now()}`,
+      user_id: userId,
       date: new Date().toISOString(),
       title,
       hours: parseFloat(hours),
@@ -57,8 +64,12 @@ const WorkLog: React.FC<WorkLogProps> = ({ lang }) => {
 
   const deleteLog = async (id: string) => {
     const msg = lang === 'bn' ? 'আপনি কি নিশ্চিত যে এই লগটি ডিলিট করতে চান?' : 'Are you sure you want to delete this log?';
-    if (window.confirm(msg)) {
-      const { error } = await supabase.from('work_logs').delete().eq('id', id);
+    if (window.confirm(msg) && userId) {
+      const { error } = await supabase
+        .from('work_logs')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
       if (!error) setLogs(logs.filter(l => l.id !== id));
     }
   };
