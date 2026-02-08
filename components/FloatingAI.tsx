@@ -76,8 +76,12 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
   const handleSelectKey = async () => {
     if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
-      await window.aistudio.openSelectKey();
-      setError(null);
+      try {
+        await window.aistudio.openSelectKey();
+        setError(null);
+      } catch (e) {
+        console.error("Key selection failed", e);
+      }
     }
   };
 
@@ -135,15 +139,19 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
       }
     } catch (error: any) {
       console.error("Chat Error:", error);
-      const isKeyError = error.message?.includes("Requested entity was not found") || error.message?.includes("API key");
+      const errorMsg = error.message?.toLowerCase() || "";
+      const isKeyError = errorMsg.includes("requested entity was not found") || 
+                         errorMsg.includes("api key") || 
+                         errorMsg.includes("unauthorized") ||
+                         errorMsg.includes("invalid_argument");
       
       if (isKeyError) {
-        setError(lang === 'bn' ? "এপিআই কী পাওয়া যায়নি। দয়া করে কী সিলেক্ট করুন।" : "API Key missing. Please select a key.");
+        setError(lang === 'bn' ? "এপিআই কী কাজ করছে না। দয়া করে সঠিক কী সিলেক্ট করুন।" : "API Key is not working. Please select a valid key.");
       } else {
-        setError(lang === 'bn' ? "কানেকশনে সমস্যা হচ্ছে।" : "Connection problem.");
+        setError(lang === 'bn' ? "কানেকশনে সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।" : "Connection problem. Please try again.");
       }
       
-      setMessages(prev => [...prev, { role: 'joy', text: lang === 'bn' ? "দুঃখিত, বর্তমানে আমার সাথে সংযোগ স্থাপন করা সম্ভব হচ্ছে না।" : "Sorry, I'm having trouble connecting right now." }]);
+      setMessages(prev => [...prev, { role: 'joy', text: lang === 'bn' ? "দুঃখিত, সংযোগ স্থাপন করা যাচ্ছে না। আপনার এপিআই কী-টি একবার চেক করে নিন।" : "Sorry, I can't connect. Please check your API Key." }]);
     } finally {
       setIsTyping(false);
     }
@@ -151,6 +159,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
   return (
     <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end">
+      {/* Chat Window */}
       {isOpen && (
         <div className="mb-4 w-[350px] md:w-[400px] h-[600px] bg-white rounded-[32px] shadow-2xl border border-blue-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
           <div className="p-5 bg-blue-600 text-white flex items-center justify-between">
@@ -186,13 +195,13 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                 </div>
                 <p className="text-sm font-bold leading-relaxed text-slate-600 px-4">
                   {lang === 'bn' 
-                    ? 'নমস্কার! আমি জয় কুমার বিশ্বাস। আপনার দিনটি কেমন কাটছে? আপনি চাইলে মাইক্রোফোন আইকনে ক্লিক করে সরাসরি আমার সাথে কথা বলতে পারেন।' 
-                    : 'Hello! I am Joy Kumar Biswas. How is your day? You can talk to me directly by clicking the microphone icon.'}
+                    ? 'নমস্কার! আমি জয় কুমার বিশ্বাস। মাইক্রোফোন আইকনে ক্লিক করে সরাসরি আমার সাথে কথা বলতে পারেন।' 
+                    : 'Hello! I am Joy Kumar Biswas. Click the microphone icon to talk to me directly.'}
                 </p>
               </div>
             )}
             {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
+              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                 <div className={`max-w-[85%] p-4 rounded-2xl text-sm font-bold shadow-sm whitespace-pre-wrap ${
                   msg.role === 'user' 
                     ? 'bg-blue-600 text-white rounded-tr-none' 
@@ -216,15 +225,17 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
           </div>
 
           {error && (
-            <div className="mx-4 mb-2 p-3 bg-amber-50 text-amber-700 rounded-xl text-[10px] font-bold flex flex-col gap-2 border border-amber-100">
+            <div className="mx-4 mb-2 p-4 bg-amber-50 text-amber-800 rounded-2xl text-[11px] font-bold flex flex-col gap-3 border border-amber-200 shadow-sm">
               <div className="flex items-center gap-2">
-                <AlertCircle size={14} /> {error}
+                <AlertCircle size={16} className="text-amber-600" /> 
+                <span>{error}</span>
               </div>
-              {error.includes("কী") && (
-                <button onClick={handleSelectKey} className="w-full py-2 bg-amber-600 text-white rounded-lg flex items-center justify-center gap-2">
-                  <Key size={12} /> কী সিলেক্ট করুন
-                </button>
-              )}
+              <button 
+                onClick={handleSelectKey} 
+                className="w-full py-2.5 bg-amber-600 text-white rounded-xl flex items-center justify-center gap-2 shadow-md hover:bg-amber-700 active:scale-95 transition-all"
+              >
+                <Key size={14} /> এপিআই কী সিলেক্ট করুন
+              </button>
             </div>
           )}
 
@@ -261,6 +272,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         </div>
       )}
 
+      {/* Toggle Button */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className={`w-16 h-16 rounded-[24px] shadow-2xl flex items-center justify-center text-white transition-all hover:scale-110 active:scale-95 group relative ${

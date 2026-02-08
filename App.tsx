@@ -88,8 +88,13 @@ const App: React.FC = () => {
 
   const handleSelectKey = async () => {
     if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
-      await window.aistudio.openSelectKey();
-      setHasApiKey(true);
+      try {
+        await window.aistudio.openSelectKey();
+        // GUIDELINE: Assume selection was successful to mitigate race condition
+        setHasApiKey(true);
+      } catch (e) {
+        console.error("Key selection failed", e);
+      }
     }
   };
 
@@ -414,8 +419,8 @@ const App: React.FC = () => {
 
           <div className="flex items-center gap-4">
              {!hasApiKey && (
-               <button onClick={handleSelectKey} className="flex items-center gap-2 bg-amber-100 text-amber-700 px-4 py-2 rounded-xl text-xs font-black shadow-sm border border-amber-200 animate-pulse">
-                 <Key size={14} /> <span>API কী সিলেক্ট করুন</span>
+               <button onClick={handleSelectKey} className="flex items-center gap-2 bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg border border-amber-500 animate-pulse hover:scale-105 transition-all">
+                 <Key size={14} /> <span>এপিআই কী সিলেক্ট করুন</span>
                </button>
              )}
              <div className="flex gap-1 bg-white p-1 rounded-xl border border-blue-50">

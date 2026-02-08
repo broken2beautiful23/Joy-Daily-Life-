@@ -8,6 +8,7 @@ const SYSTEM_INSTRUCTION = `আপনার নাম জয় কুমার ব
 বাংলা ভাষায় উত্তর দিন যদি না ব্যবহারকারী ইংরেজিতে জিজ্ঞাসা করেন।`;
 
 export async function generateDailySummary(data: any) {
+  // Always initialize right before use to catch the latest API Key
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = 'gemini-3-flash-preview';
   
@@ -33,6 +34,7 @@ export async function generateDailySummary(data: any) {
 }
 
 export async function chatWithJoy(userMessage: string, userData: any) {
+  // Always initialize right before use to catch the latest API Key
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = 'gemini-3-flash-preview';
 
@@ -59,6 +61,7 @@ export async function chatWithJoy(userMessage: string, userData: any) {
 
 export async function speakText(text: string): Promise<string | null> {
   try {
+    // Always initialize right before use to catch the latest API Key
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
