@@ -3,45 +3,47 @@ import { GoogleGenAI, Modality } from "@google/genai";
 
 /**
  * জয় (Joy) এর জন্য সিস্টেম ইনস্ট্রাকশন। 
- * এটি নিশ্চিত করে যে এআই কোনো কারিগরি বা এপিআই কথা বলবে না।
  */
-const JOY_SYSTEM_PROMPT = "আপনার নাম জয়। আপনি একজন বন্ধুসুলভ পার্সোনাল লাইফ কোচ। সবসময় মিষ্টিভাবে বাংলায় কথা বলুন। কোনো কারিগরি বা এপিআই (API) সংক্রান্ত কথা বলবেন না। ব্যবহারকারীর প্রতিটি কথার সুন্দর এবং অনুপ্রেরণামূলক উত্তর দিন। আপনার মূল লক্ষ্য ব্যবহারকারীকে মোটিভেট করা এবং তার কাজে সাহায্য করা।";
+const JOY_SYSTEM_PROMPT = "আপনার নাম জয়। আপনি একজন বন্ধুসুলভ পার্সোনাল লাইফ কোচ। সবসময় মিষ্টিভাবে বাংলায় কথা বলুন। ব্যবহারকারীর প্রতিটি কথার সুন্দর এবং অনুপ্রেরণামূলক উত্তর দিন। আপনার মূল লক্ষ্য ব্যবহারকারীকে মোটিভেট করা এবং তার কাজে সাহায্য করা। কোনো এপিআই বা টেকনিক্যাল কথা বলবেন না।";
 
 const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
 
 /**
  * সবার জন্য সরাসরি চ্যাট করার ব্যবস্থা।
- * এটি সিস্টেম থেকে সরাসরি API_KEY গ্রহণ করে যাতে ব্যবহারকারীকে কোনো কিছু সেটআপ করতে না হয়।
+ * এটি সরাসরি process.env.API_KEY ব্যবহার করে যা সবার জন্য উন্মুক্ত।
  */
 export async function* chatWithJoyStream(userMessage: string, userData: any) {
-  // প্রতিটি রিকোয়েস্টের জন্য নতুন ইন্সট্যান্স তৈরি করা হচ্ছে যাতে সবার জন্য এটি সমানভাবে কাজ করে
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // এপিআই কী চেক করে নতুন ইন্সট্যান্স তৈরি
+  const apiKey = process.env.API_KEY || '';
+  const ai = new GoogleGenAI({ apiKey });
   
   try {
     const responseStream = await ai.models.generateContentStream({
       model: PRIMARY_MODEL,
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: `ব্যবহারকারী ${userData.userName || 'বন্ধু'} বলছে: "${userMessage}"` }]
-        }
-      ],
+      contents: [{ 
+        parts: [{ 
+          text: `ব্যবহারকারী ${userData.userName || 'বন্ধু'} বলছে: "${userMessage}"` 
+        }] 
+      }],
       config: {
         systemInstruction: JOY_SYSTEM_PROMPT,
-        temperature: 0.8,
-        topP: 0.95,
+        temperature: 0.7,
+        topP: 0.9,
+        topK: 40
       },
     });
 
     for await (const chunk of responseStream) {
       const text = chunk.text;
-      if (text) yield text;
+      if (text) {
+        yield text;
+      }
     }
   } catch (error: any) {
-    console.error("Joy Connection Error:", error);
-    // যদি এপিআই কী তে সমস্যা থাকে বা কোটা শেষ হয়ে যায়, তবে এটি একটি বন্ধুত্বপূর্ণ মেসেজ দেবে
-    yield "দুঃখিত বন্ধু, আমার নেটওয়ার্কে সামান্য সমস্যা হচ্ছে। দয়া করে কিছুক্ষণ পর আবার মেসেজ দিন, আমি আপনার জন্য অপেক্ষা করছি!";
+    console.error("Joy Connection Error Details:", error);
+    // বিস্তারিত এরর মেসেজ না দিয়ে ব্যবহারকারীকে শান্ত রাখার চেষ্টা
+    yield "একটু সমস্যা হচ্ছে বন্ধু। দয়া করে আবার মেসেজ দাও, আমি তোমার কথা শোনার জন্য তৈরি!";
   }
 }
 
@@ -49,7 +51,8 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
  * টেক্সট থেকে কথা বলা (TTS) এর ফাংশন।
  */
 export async function speakText(text: string): Promise<string | null> {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY || '';
+  const ai = new GoogleGenAI({ apiKey });
   
   try {
     const response = await ai.models.generateContent({
@@ -65,9 +68,10 @@ export async function speakText(text: string): Promise<string | null> {
       },
     });
 
-    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
+    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    return audioData || null;
   } catch (error: any) {
-    console.error("Joy Voice Error:", error);
+    console.error("Voice Error:", error);
     return null;
   }
 }
