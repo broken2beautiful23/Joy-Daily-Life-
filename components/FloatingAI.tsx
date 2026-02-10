@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, X, Sparkles, 
-  Minimize2, Volume2, VolumeX, Mic, MicOff, Zap
+  Minimize2, Volume2, VolumeX, Mic, MicOff, Zap, RotateCcw
 } from 'lucide-react';
 import { chatWithJoyStream, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -16,7 +16,7 @@ interface FloatingAIProps {
 const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<{role: 'user' | 'joy', text: string}[]>([]);
+  const [messages, setMessages] = useState<{role: 'user' | 'joy', text: string, isError?: boolean}[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [isListening, setIsListening] = useState(false);
@@ -115,45 +115,45 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     setInput('');
     setIsTyping(true);
     
-    // এআই-এর জন্য খালি মেসেজ যোগ করা
+    // এআই-এর জন্য প্রিপারেশন মেসেজ
     setMessages(prev => [...prev, { role: 'joy', text: '' }]);
     
-    let currentResponse = '';
-    let success = false;
+    let fullResponseText = '';
+    let hasSuccessfullyStreamed = false;
 
     try {
       const stream = chatWithJoyStream(userMsg, { userName });
       for await (const chunk of stream) {
-        currentResponse += chunk;
+        fullResponseText += chunk;
         setMessages(prev => {
           const updated = [...prev];
           if (updated.length > 0) {
-            updated[updated.length - 1] = { role: 'joy', text: currentResponse };
+            updated[updated.length - 1] = { role: 'joy', text: fullResponseText };
           }
           return updated;
         });
-        success = true;
+        hasSuccessfullyStreamed = true;
       }
       
-      if (!success) {
-        throw new Error("No data received from AI stream");
-      }
+      if (!hasSuccessfullyStreamed) throw new Error("Connection Timeout");
+
     } catch (err) {
-      console.error("Joy Assistant Error:", err);
+      console.error("Joy Response Error:", err);
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = { 
           role: 'joy', 
           text: lang === 'bn' 
-            ? "দুঃখিত বন্ধু, এআই সার্ভারের সাথে সংযোগ করতে সমস্যা হচ্ছে। দয়া করে ইন্টারনেট চেক করে আবার চেষ্টা করো।" 
-            : "Sorry friend, having trouble connecting to the AI server. Please check your internet and try again." 
+            ? "দুঃখিত বন্ধু, ইন্টারনেটে সমস্যার কারণে আপনার সাথে সংযোগ করতে পারছি না। দয়া করে আবার চেষ্টা করুন।" 
+            : "Sorry friend, connection failed due to network issues. Please try again.",
+          isError: true
         };
         return updated;
       });
     } finally {
       setIsTyping(false);
-      if (isVoiceEnabled && currentResponse && success) {
-        playAudioResponse(currentResponse);
+      if (isVoiceEnabled && fullResponseText && hasSuccessfullyStreamed) {
+        playAudioResponse(fullResponseText);
       }
     }
   };
@@ -186,9 +186,18 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
                 <div className={`p-4 rounded-3xl max-w-[85%] text-sm font-bold shadow-sm ${
-                  msg.role === 'user' ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
+                  msg.role === 'user' 
+                    ? 'bg-orange-500 text-white rounded-tr-none' 
+                    : msg.isError 
+                      ? 'bg-rose-50 text-rose-600 border border-rose-100 rounded-tl-none' 
+                      : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                 }`}>
                   {msg.text || (msg.role === 'joy' ? 'জয় উত্তর দিচ্ছে...' : '')}
+                  {msg.isError && (
+                    <button onClick={() => setMessages([])} className="mt-2 flex items-center gap-1 text-[10px] font-black uppercase text-rose-400 hover:text-rose-600">
+                      <RotateCcw size={10} /> চ্যাট রিসেট করুন
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

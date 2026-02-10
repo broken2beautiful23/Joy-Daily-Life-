@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, Sparkles, Mic, MicOff, Volume2, VolumeX, 
-  Bot, User, Zap, ArrowRight, Lightbulb, Wallet, Calendar
+  Bot, User, Zap, ArrowRight, Lightbulb, Wallet, Calendar, RotateCcw
 } from 'lucide-react';
 import { chatWithJoyStream, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -15,7 +15,7 @@ interface AICoachProps {
 
 const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<{role: 'user' | 'joy', text: string}[]>([]);
+  const [messages, setMessages] = useState<{role: 'user' | 'joy', text: string, isError?: boolean}[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [isListening, setIsListening] = useState(false);
@@ -113,6 +113,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     setMessages(prev => [...prev, { role: 'joy', text: '' }]);
     
     let fullResponse = '';
+    let success = false;
     try {
       const stream = chatWithJoyStream(userMsg, { userName });
       for await (const chunk of stream) {
@@ -122,17 +123,24 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
           newMsgs[newMsgs.length - 1] = { role: 'joy', text: fullResponse };
           return newMsgs;
         });
+        success = true;
       }
+      if (!success) throw new Error("Connection failed");
     } catch (err) {
+      console.error("Joy Error:", err);
       setMessages(prev => {
         const newMsgs = [...prev];
-        newMsgs[newMsgs.length - 1] = { role: 'joy', text: "দুঃখিত, সংযোগে সমস্যা হয়েছে।" };
+        newMsgs[newMsgs.length - 1] = { 
+          role: 'joy', 
+          text: lang === 'bn' ? "দুঃখিত বন্ধু, এআই সার্ভারের সাথে সংযোগ বিচ্ছিন্ন হয়ে গিয়েছে।" : "Sorry friend, connection lost.",
+          isError: true
+        };
         return newMsgs;
       });
+    } finally {
+      setIsTyping(false);
+      if (isVoiceEnabled && fullResponse && success) await playAudioResponse(fullResponse);
     }
-
-    setIsTyping(false);
-    if (isVoiceEnabled && fullResponse) await playAudioResponse(fullResponse);
   };
 
   const quickPrompts = [
@@ -167,9 +175,18 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
                   <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                     <div className={`p-5 rounded-[32px] text-base font-bold shadow-sm whitespace-pre-wrap leading-relaxed ${
-                      msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
+                      msg.role === 'user' 
+                        ? 'bg-blue-600 text-white rounded-tr-none' 
+                        : msg.isError 
+                          ? 'bg-rose-50 text-rose-600 border border-rose-100 rounded-tl-none' 
+                          : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                     }`}>
                       {msg.text}
+                      {msg.isError && (
+                        <button onClick={() => setMessages([])} className="mt-2 flex items-center gap-1 text-[10px] font-black uppercase text-rose-400">
+                          <RotateCcw size={10} /> রিসেট করুন
+                        </button>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 px-3">
                       {msg.role === 'joy' ? <Bot size={12} className="text-blue-500" /> : <User size={12} className="text-slate-400" />}
@@ -204,6 +221,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                   onChange={(e) => setInput(e.target.value)} 
                   placeholder={t.ask_joy} 
                   className="w-full pl-6 pr-16 py-5 bg-slate-100 border-none rounded-2xl focus:ring-2 focus:ring-blue-500/20 font-bold text-lg" 
+                  disabled={isTyping}
                 />
                 <button type="submit" disabled={!input.trim() || isTyping} className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md disabled:opacity-50">
                   <Send size={20} />
@@ -231,6 +249,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                   key={idx} 
                   onClick={() => handleSendMessage(item.prompt)}
                   className="w-full flex items-center gap-4 p-4 rounded-3xl bg-white border border-blue-50 hover:border-blue-500 hover:shadow-xl transition-all group"
+                  disabled={isTyping}
                 >
                   <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
                     {item.icon}
