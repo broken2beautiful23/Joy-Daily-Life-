@@ -12,11 +12,13 @@ import {
   Briefcase,
   Star,
   Cpu,
-  Timer
+  Timer,
+  Sparkles
 } from 'lucide-react';
 
 export const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard size={20} /> },
+  { id: 'aicoach', label: 'এ আই অ্যাসিস্ট্যান্ট', icon: <Sparkles size={20} className="text-indigo-500 animate-pulse" /> },
   { id: 'worktimer', label: 'ওয়ার্ক টাইমার', icon: <Timer size={20} className="text-orange-500" /> },
   { id: 'profwork', label: 'প্রফেশনাল কাজ', icon: <Cpu size={20} /> },
   { id: 'worklog', label: 'কাজ ও শিখন লগ', icon: <Briefcase size={20} /> },

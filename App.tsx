@@ -13,6 +13,8 @@ import WorkLog from './components/WorkLog';
 import MotivationalStories from './components/MotivationalStories';
 import ProfessionalWork from './components/ProfessionalWork';
 import WorkTimer from './components/WorkTimer';
+import AICoach from './components/AICoach';
+import FloatingAI from './components/FloatingAI';
 import { translations, Language } from './translations';
 import { supabase } from './services/supabase';
 import { 
@@ -441,6 +443,7 @@ const App: React.FC = () => {
               const props = { lang, userName, userId };
               switch (activeTab) {
                 case 'dashboard': return <Dashboard {...props} />;
+                case 'aicoach': return <AICoach {...props} />;
                 case 'worktimer': return <WorkTimer {...props} />;
                 case 'profwork': return <ProfessionalWork {...props} />;
                 case 'worklog': return <WorkLog {...props} />;
@@ -457,6 +460,9 @@ const App: React.FC = () => {
             })()}
           </div>
         </div>
+        
+        {/* Global Floating AI Assistant */}
+        <FloatingAI lang={lang} userName={userName} />
       </main>
     </div>
   );

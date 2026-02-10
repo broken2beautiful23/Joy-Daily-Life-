@@ -83,7 +83,15 @@ export const translations = {
     reset: "রিসেট",
     log_this_session: "সেশনটি লগ করুন",
     focus_motivation: "পুরো মনোযোগ দিয়ে কাজ করুন!",
-    break_motivation: "একটু বিশ্রাম নিন, রিফ্রেশ হন।"
+    break_motivation: "একটু বিশ্রাম নিন, রিফ্রেশ হন!",
+    ai_assistant: "এ আই অ্যাসিস্ট্যান্ট",
+    ai_name: "জয়",
+    ai_role: "পার্সোনাল লাইফ কোচ",
+    ask_joy: "জয়কে কিছু জিজ্ঞাসা করুন...",
+    plan_day: "দিনের পরিকল্পনা",
+    get_motivation: "মোটিভেশন নিন",
+    money_save: "টাকা জমানোর উপায়",
+    quick_tips: "দ্রুত পরামর্শ"
   },
   en: {
     app_name: "JoyLife",
@@ -168,7 +176,15 @@ export const translations = {
     reset: "Reset",
     log_this_session: "Log Session",
     focus_motivation: "Stay focused on your task!",
-    break_motivation: "Take a deep breath and relax."
+    break_motivation: "Take a deep breath and relax.",
+    ai_assistant: "AI Assistant",
+    ai_name: "Joy",
+    ai_role: "Personal Life Coach",
+    ask_joy: "Ask Joy something...",
+    plan_day: "Plan the day",
+    get_motivation: "Get Motivation",
+    money_save: "Money Saving Tips",
+    quick_tips: "Quick Tips"
   }
 };
 
