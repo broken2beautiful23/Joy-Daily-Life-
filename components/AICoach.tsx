@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, Sparkles, Mic, MicOff, Volume2, VolumeX, 
-  Bot, User, Loader2, Zap, ArrowRight, Lightbulb, Wallet, Calendar
+  Bot, User, Zap, ArrowRight, Lightbulb, Wallet, Calendar
 } from 'lucide-react';
 import { chatWithJoyStream, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -36,7 +36,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
 
   useEffect(() => {
     const greeting = lang === 'bn' 
-      ? `নমস্কার ${userName}! আমি জয়। আজ কীভাবে সাহায্য করতে পারি?` 
+      ? `নমস্কার ${userName}! আমি জয়। আজ কীভাবে আপনাকে সাহায্য করতে পারি?` 
       : `Hello ${userName}! I am Joy. How can I help you today?`;
     if (messages.length === 0) setMessages([{ role: 'joy', text: greeting }]);
   }, [lang, userName, messages.length]);
@@ -67,13 +67,13 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
         recognitionRef.current?.start();
         setIsListening(true);
       } catch (e) {
-        console.error("Speech recognition failed:", e);
+        console.error("Mic error:", e);
       }
     }
   };
 
   const playAudioResponse = async (text: string) => {
-    if (!isVoiceEnabled) return;
+    if (!isVoiceEnabled || !text) return;
     try {
       const base64Audio = await speakText(text);
       if (base64Audio) {
@@ -99,7 +99,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
         source.start();
       }
     } catch (err) {
-      console.error("Audio playback error:", err);
+      console.error("Audio error:", err);
     }
   };
 
@@ -110,17 +110,23 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     setInput('');
     setIsTyping(true);
 
-    // Initial message holder for streaming
     setMessages(prev => [...prev, { role: 'joy', text: '' }]);
     
     let fullResponse = '';
-    const stream = chatWithJoyStream(userMsg, { userName });
-    
-    for await (const chunk of stream) {
-      fullResponse += chunk;
+    try {
+      const stream = chatWithJoyStream(userMsg, { userName });
+      for await (const chunk of stream) {
+        fullResponse += chunk;
+        setMessages(prev => {
+          const newMsgs = [...prev];
+          newMsgs[newMsgs.length - 1] = { role: 'joy', text: fullResponse };
+          return newMsgs;
+        });
+      }
+    } catch (err) {
       setMessages(prev => {
         const newMsgs = [...prev];
-        newMsgs[newMsgs.length - 1] = { role: 'joy', text: fullResponse };
+        newMsgs[newMsgs.length - 1] = { role: 'joy', text: "দুঃখিত, সংযোগে সমস্যা হয়েছে।" };
         return newMsgs;
       });
     }
@@ -147,7 +153,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
               </div>
               <div>
                 <h3 className="font-black text-lg flex items-center gap-2">{t.ai_name} <Zap size={14} className="fill-yellow-300 text-yellow-300" /></h3>
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-70">{t.ai_role}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-70 tracking-widest">{t.ai_role}</p>
               </div>
             </div>
             <button onClick={() => setIsVoiceEnabled(!isVoiceEnabled)} className={`p-3 rounded-xl transition-all ${isVoiceEnabled ? 'bg-white/20 text-white' : 'text-white/40'}`}>

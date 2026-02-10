@@ -38,7 +38,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       const greeting = lang === 'bn' 
-        ? `নমস্কার ${userName}! আমি জয়। আপনার দিনটি কেমন কাটছে? আমি আপনাকে কীভাবে সাহায্য করতে পারি?` 
+        ? `নমস্কার ${userName}! আমি জয়। আজ কীভাবে আপনাকে সাহায্য করতে পারি?` 
         : `Hello ${userName}! I am Joy. How can I help you today?`;
       setMessages([{ role: 'joy', text: greeting }]);
     }
@@ -102,7 +102,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         source.start();
       }
     } catch (err) {
-      console.error("Audio playback error:", err);
+      console.error("Audio error:", err);
     }
   };
 
@@ -115,7 +115,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     setInput('');
     setIsTyping(true);
 
-    // AI উত্তর শুরু করার জন্য খালি ঘর তৈরি
     setMessages(prev => [...prev, { role: 'joy', text: '' }]);
     
     let fullText = '';
@@ -130,10 +129,10 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         });
       }
     } catch (err) {
-      console.error("Stream catch:", err);
+      console.error("Stream error:", err);
       setMessages(prev => {
         const updated = [...prev];
-        updated[updated.length - 1] = { role: 'joy', text: "দুঃখিত, বর্তমানে কথা বলতে পারছি না। আবার চেষ্টা করুন।" };
+        updated[updated.length - 1] = { role: 'joy', text: "দুঃখিত, সংযোগে সমস্যা হচ্ছে। আবার চেষ্টা করুন।" };
         return updated;
       });
     } finally {
@@ -155,7 +154,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
               </div>
               <div>
                 <h4 className="font-black text-lg">{t.ai_name}</h4>
-                <p className="text-[10px] uppercase font-bold opacity-70">{t.ai_role}</p>
+                <p className="text-[10px] uppercase font-bold opacity-70 tracking-widest">{t.ai_role}</p>
               </div>
             </div>
             <div className="flex gap-1">
@@ -180,7 +179,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
             ))}
             {isTyping && messages[messages.length-1]?.text === '' && (
               <div className="flex justify-start">
-                <div className="bg-white p-4 rounded-3xl rounded-tl-none border border-slate-100 flex gap-1">
+                <div className="bg-white p-4 rounded-3xl rounded-tl-none border border-slate-100 flex gap-1 shadow-sm">
                   <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></div>
                   <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
                   <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
@@ -200,13 +199,13 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                   value={input} 
                   onChange={(e) => setInput(e.target.value)} 
                   placeholder={t.ask_joy} 
-                  className="w-full pl-6 pr-14 py-4 bg-slate-100 rounded-[20px] font-bold outline-none border-2 border-transparent focus:border-blue-500/10 focus:bg-white" 
+                  className="w-full pl-6 pr-14 py-4 bg-slate-100 rounded-[20px] font-bold outline-none border-2 border-transparent focus:border-blue-500/10 focus:bg-white transition-all shadow-inner" 
                   disabled={isTyping}
                 />
                 <button 
                   type="submit" 
                   disabled={!input.trim() || isTyping} 
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-11 bg-orange-400 text-white rounded-xl flex items-center justify-center disabled:opacity-50"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-11 bg-orange-400 text-white rounded-xl flex items-center justify-center disabled:opacity-50 hover:bg-orange-500 transition-colors"
                 >
                   <Send size={20} />
                 </button>
@@ -216,28 +215,28 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         </div>
       )}
 
-      {/* Launcher Icon */}
+      {/* Launcher Icon with Floating Effect */}
       <div className="relative cursor-pointer group" onClick={() => setIsOpen(!isOpen)}>
         {isOpen ? (
-          <button className="w-14 h-14 bg-slate-900 rounded-full shadow-2xl flex items-center justify-center text-white ring-4 ring-white transition-all hover:scale-110">
+          <button className="w-14 h-14 bg-slate-900 rounded-full shadow-2xl flex items-center justify-center text-white ring-4 ring-white transition-all hover:scale-110 active:scale-95">
             <X size={28} />
           </button>
         ) : (
-          <div className="relative w-20 h-24 flex items-center justify-center transition-transform hover:scale-110">
+          <div className="relative w-20 h-24 flex items-center justify-center transition-transform hover:scale-110 active:scale-95">
             <div className="absolute bottom-10 animate-balloon">
-              <div className="absolute -left-6 bottom-4 w-8 h-10 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-full shadow-lg border border-white/20 animate-balloon delay-1">
+              <div className="absolute -left-6 bottom-4 w-8 h-10 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-full shadow-lg border border-white/20">
                 <div className="absolute bottom-[-15px] left-1/2 -translate-x-1/2 w-[1px] h-12 bg-slate-400/30"></div>
                 <div className="absolute top-1 left-2 w-2 h-2 bg-white/40 rounded-full blur-[1px]"></div>
               </div>
-              <div className="absolute left-0 bottom-8 w-10 h-12 bg-gradient-to-tr from-violet-600 to-violet-400 rounded-full shadow-xl border border-white/30 animate-balloon delay-2 flex items-center justify-center">
+              <div className="absolute left-0 bottom-8 w-10 h-12 bg-gradient-to-tr from-violet-600 to-violet-400 rounded-full shadow-xl border border-white/30 flex items-center justify-center">
                 <div className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 w-[1px] h-16 bg-slate-400/30"></div>
                 <Sparkles size={14} className="text-white animate-pulse" />
               </div>
-              <div className="absolute -right-6 bottom-4 w-8 h-10 bg-gradient-to-tr from-orange-500 to-amber-400 rounded-full shadow-lg border border-white/20 animate-balloon delay-3">
+              <div className="absolute -right-6 bottom-4 w-8 h-10 bg-gradient-to-tr from-orange-500 to-amber-400 rounded-full shadow-lg border border-white/20">
                 <div className="absolute bottom-[-15px] left-1/2 -translate-x-1/2 w-[1px] h-12 bg-slate-400/30"></div>
               </div>
             </div>
-            <div className="absolute top-0 right-2 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white shadow-sm"></div>
+            <div className="absolute top-0 right-2 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white shadow-sm z-10"></div>
           </div>
         )}
       </div>
