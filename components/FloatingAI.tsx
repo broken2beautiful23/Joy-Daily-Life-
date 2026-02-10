@@ -117,6 +117,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     setMessages(prev => [...prev, { role: 'joy', text: '' }]);
     
     let fullText = '';
+    let hasError = false;
+
     try {
       const stream = chatWithJoyStream(userMsg, { userName });
       for await (const chunk of stream) {
@@ -127,16 +129,20 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
           return updated;
         });
       }
+      
+      if (!fullText) throw new Error("No response from AI");
+      
     } catch (err) {
       console.error("Critical Stream Error:", err);
+      hasError = true;
       setMessages(prev => {
         const updated = [...prev];
-        updated[updated.length - 1] = { role: 'joy', text: "দুঃখিত বন্ধু, আমি এখন একটু ব্যস্ত আছি। কিছুক্ষণ পর আবার চেষ্টা করো।" };
+        updated[updated.length - 1] = { role: 'joy', text: "দুঃখিত বন্ধু, আমার নেটওয়ার্কে সামান্য সমস্যা হচ্ছে। দয়া করে কিছুক্ষণ পর আবার চেষ্টা করো।" };
         return updated;
       });
     } finally {
       setIsTyping(false);
-      if (isVoiceEnabled && fullText) {
+      if (isVoiceEnabled && fullText && !hasError) {
         playAudioResponse(fullText);
       }
     }
@@ -172,7 +178,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                 <div className={`p-4 rounded-3xl max-w-[85%] text-sm font-bold shadow-sm ${
                   msg.role === 'user' ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                 }`}>
-                  {msg.text || (msg.role === 'joy' ? 'চিন্তা করছি...' : '')}
+                  {msg.text || (msg.role === 'joy' ? 'জয় উত্তর দিচ্ছে...' : '')}
                 </div>
               </div>
             ))}
@@ -214,7 +220,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         </div>
       )}
 
-      {/* Launcher Icon with Floating Effect */}
       <div className="relative cursor-pointer group" onClick={() => setIsOpen(!isOpen)}>
         {isOpen ? (
           <button className="w-14 h-14 bg-slate-900 rounded-full shadow-2xl flex items-center justify-center text-white ring-4 ring-white transition-all hover:scale-110 active:scale-95">

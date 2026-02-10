@@ -14,14 +14,21 @@ const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
  * এটি সরাসরি process.env.API_KEY ব্যবহার করে যা সবার জন্য উন্মুক্ত।
  */
 export async function* chatWithJoyStream(userMessage: string, userData: any) {
-  // এপিআই কী চেক করে নতুন ইন্সট্যান্স তৈরি
-  const apiKey = process.env.API_KEY || '';
+  // নিশ্চিত করা হচ্ছে যে এপিআই কী বিদ্যমান
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey) {
+    yield "দুঃখিত বন্ধু, এআই সার্ভারের সাথে সংযোগ করা যাচ্ছে না। দয়া করে এডমিনকে জানান।";
+    return;
+  }
+
   const ai = new GoogleGenAI({ apiKey });
   
   try {
     const responseStream = await ai.models.generateContentStream({
       model: PRIMARY_MODEL,
       contents: [{ 
+        role: 'user',
         parts: [{ 
           text: `ব্যবহারকারী ${userData.userName || 'বন্ধু'} বলছে: "${userMessage}"` 
         }] 
@@ -42,8 +49,7 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
     }
   } catch (error: any) {
     console.error("Joy Connection Error Details:", error);
-    // বিস্তারিত এরর মেসেজ না দিয়ে ব্যবহারকারীকে শান্ত রাখার চেষ্টা
-    yield "একটু সমস্যা হচ্ছে বন্ধু। দয়া করে আবার মেসেজ দাও, আমি তোমার কথা শোনার জন্য তৈরি!";
+    yield "একটু সমস্যা হচ্ছে বন্ধু। দয়া করে আপনার ইন্টারনেট চেক করে আবার মেসেজ দিন, আমি আপনার জন্য অপেক্ষা করছি!";
   }
 }
 
@@ -51,7 +57,9 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
  * টেক্সট থেকে কথা বলা (TTS) এর ফাংশন।
  */
 export async function speakText(text: string): Promise<string | null> {
-  const apiKey = process.env.API_KEY || '';
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) return null;
+
   const ai = new GoogleGenAI({ apiKey });
   
   try {
