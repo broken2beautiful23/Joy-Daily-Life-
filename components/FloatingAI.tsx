@@ -114,36 +114,46 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
     setIsTyping(true);
+    
+    // এআই-এর জন্য খালি মেসেজ যোগ করা
     setMessages(prev => [...prev, { role: 'joy', text: '' }]);
     
-    let fullText = '';
-    let hasError = false;
+    let currentResponse = '';
+    let success = false;
 
     try {
       const stream = chatWithJoyStream(userMsg, { userName });
       for await (const chunk of stream) {
-        fullText += chunk;
+        currentResponse += chunk;
         setMessages(prev => {
           const updated = [...prev];
-          updated[updated.length - 1] = { role: 'joy', text: fullText };
+          if (updated.length > 0) {
+            updated[updated.length - 1] = { role: 'joy', text: currentResponse };
+          }
           return updated;
         });
+        success = true;
       }
       
-      if (!fullText) throw new Error("No response from AI");
-      
+      if (!success) {
+        throw new Error("No data received from AI stream");
+      }
     } catch (err) {
-      console.error("Critical Stream Error:", err);
-      hasError = true;
+      console.error("Joy Assistant Error:", err);
       setMessages(prev => {
         const updated = [...prev];
-        updated[updated.length - 1] = { role: 'joy', text: "দুঃখিত বন্ধু, আমার নেটওয়ার্কে সামান্য সমস্যা হচ্ছে। দয়া করে কিছুক্ষণ পর আবার চেষ্টা করো।" };
+        updated[updated.length - 1] = { 
+          role: 'joy', 
+          text: lang === 'bn' 
+            ? "দুঃখিত বন্ধু, এআই সার্ভারের সাথে সংযোগ করতে সমস্যা হচ্ছে। দয়া করে ইন্টারনেট চেক করে আবার চেষ্টা করো।" 
+            : "Sorry friend, having trouble connecting to the AI server. Please check your internet and try again." 
+        };
         return updated;
       });
     } finally {
       setIsTyping(false);
-      if (isVoiceEnabled && fullText && !hasError) {
-        playAudioResponse(fullText);
+      if (isVoiceEnabled && currentResponse && success) {
+        playAudioResponse(currentResponse);
       }
     }
   };

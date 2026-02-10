@@ -10,19 +10,12 @@ const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
 
 /**
- * সবার জন্য সরাসরি চ্যাট করার ব্যবস্থা।
- * এটি সরাসরি process.env.API_KEY ব্যবহার করে যা সবার জন্য উন্মুক্ত।
+ * চ্যাট করার জন্য জেনারেটর ফাংশন।
+ * @google/genai এর স্ট্যান্ডার্ড গাইডলাইন মেনে তৈরি।
  */
 export async function* chatWithJoyStream(userMessage: string, userData: any) {
-  // নিশ্চিত করা হচ্ছে যে এপিআই কী বিদ্যমান
-  const apiKey = process.env.API_KEY;
-  
-  if (!apiKey) {
-    yield "দুঃখিত বন্ধু, এআই সার্ভারের সাথে সংযোগ করা যাচ্ছে না। দয়া করে এডমিনকে জানান।";
-    return;
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  // এপিআই কল করার ঠিক আগে নতুন ইন্সট্যান্স তৈরি করা হচ্ছে
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   
   try {
     const responseStream = await ai.models.generateContentStream({
@@ -35,21 +28,20 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
       }],
       config: {
         systemInstruction: JOY_SYSTEM_PROMPT,
-        temperature: 0.7,
-        topP: 0.9,
-        topK: 40
+        temperature: 0.8,
+        topP: 0.95,
       },
     });
 
     for await (const chunk of responseStream) {
-      const text = chunk.text;
-      if (text) {
-        yield text;
+      if (chunk.text) {
+        yield chunk.text;
       }
     }
   } catch (error: any) {
-    console.error("Joy Connection Error Details:", error);
-    yield "একটু সমস্যা হচ্ছে বন্ধু। দয়া করে আপনার ইন্টারনেট চেক করে আবার মেসেজ দিন, আমি আপনার জন্য অপেক্ষা করছি!";
+    console.error("Gemini Connection Error:", error);
+    // যদি এপিআই কী বা অন্য কোনো সমস্যা থাকে তবে এটি ক্যাচ করবে
+    throw error;
   }
 }
 
@@ -57,10 +49,7 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
  * টেক্সট থেকে কথা বলা (TTS) এর ফাংশন।
  */
 export async function speakText(text: string): Promise<string | null> {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) return null;
-
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   
   try {
     const response = await ai.models.generateContent({
@@ -76,10 +65,9 @@ export async function speakText(text: string): Promise<string | null> {
       },
     });
 
-    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    return audioData || null;
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
   } catch (error: any) {
-    console.error("Voice Error:", error);
+    console.error("Joy Voice Generation Error:", error);
     return null;
   }
 }
