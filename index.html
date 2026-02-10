@@ -35,6 +35,22 @@
         100% { transform: scale(1.15) rotate(5deg); }
       }
       
+      /* Balloon Floating Animations */
+      @keyframes balloon-float {
+        0%, 100% { transform: translateY(0) rotate(-2deg); }
+        50% { transform: translateY(-15px) rotate(2deg); }
+      }
+      @keyframes balloon-sway {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(8px); }
+      }
+      .animate-balloon {
+        animation: balloon-float 4s infinite ease-in-out, balloon-sway 3s infinite ease-in-out;
+      }
+      .delay-1 { animation-delay: 0.2s; }
+      .delay-2 { animation-delay: 0.8s; }
+      .delay-3 { animation-delay: 1.5s; }
+
       /* Theme Backgrounds */
       .blue .mesh-bg {
         background-color: #f0f9ff;

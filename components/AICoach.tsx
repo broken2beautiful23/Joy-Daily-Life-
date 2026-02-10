@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, Sparkles, Mic, MicOff, Volume2, VolumeX, 
-  Bot, User, Loader2, Zap, ArrowRight, Lightbulb, Wallet, Calendar, AlertCircle
+  Bot, User, Loader2, Zap, ArrowRight, Lightbulb, Wallet, Calendar
 } from 'lucide-react';
 import { chatWithJoy, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -19,7 +19,6 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [isListening, setIsListening] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -36,13 +35,10 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
   }, [messages, isTyping]);
 
   useEffect(() => {
-    const initialGreeting = lang === 'bn' 
+    const greeting = lang === 'bn' 
       ? `নমস্কার ${userName}! আমি জয়। আজ আমি আপনার দিনটি সফল করতে কী করতে পারি?` 
       : `Hello ${userName}! I am Joy. How can I help you make today a success?`;
-    
-    if (messages.length === 0) {
-      setMessages([{ role: 'joy', text: initialGreeting }]);
-    }
+    if (messages.length === 0) setMessages([{ role: 'joy', text: greeting }]);
   }, [lang, userName, messages.length]);
 
   useEffect(() => {
@@ -113,19 +109,11 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
     setIsTyping(true);
-    setError(null);
 
-    try {
-      const response = await chatWithJoy(userMsg, { userName });
-      setMessages(prev => [...prev, { role: 'joy', text: response }]);
-      if (isVoiceEnabled) await playAudioResponse(response);
-    } catch (error: any) {
-      console.error("Chat Error:", error);
-      setError(lang === 'bn' ? "কানেকশন এরর। অনুগ্রহ করে আবার চেষ্টা করুন।" : "Connection error. Please try again.");
-      setMessages(prev => [...prev, { role: 'joy', text: lang === 'bn' ? "দুঃখিত, কানেকশনে সমস্যা হচ্ছে।" : "Sorry, connection issue." }]);
-    } finally {
-      setIsTyping(false);
-    }
+    const response = await chatWithJoy(userMsg, { userName });
+    setMessages(prev => [...prev, { role: 'joy', text: response }]);
+    setIsTyping(false);
+    if (isVoiceEnabled) await playAudioResponse(response);
   };
 
   const quickPrompts = [
@@ -140,9 +128,9 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
         
         {/* Chat Area */}
         <div className="flex-1 bg-white/70 backdrop-blur-2xl rounded-[40px] border border-blue-50 shadow-2xl flex flex-col overflow-hidden">
-          <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-blue-600 text-white">
+          <div className="p-6 bg-blue-600 text-white flex items-center justify-between shadow-md relative z-10">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-white/20 p-1 border border-white/20">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 p-1">
                 <img src={AI_AVATAR_URL} alt="Joy" className="w-full h-full object-cover rounded-xl" />
               </div>
               <div>
@@ -160,9 +148,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
                 <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                   <div className={`p-5 rounded-[32px] text-base font-bold shadow-sm whitespace-pre-wrap leading-relaxed ${
-                    msg.role === 'user' 
-                      ? 'bg-blue-600 text-white rounded-tr-none' 
-                      : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
+                    msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                   }`}>
                     {msg.text}
                   </div>
@@ -186,27 +172,12 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
             )}
           </div>
 
-          {error && (
-            <div className="mx-8 mb-4 p-4 bg-red-50 text-red-700 rounded-2xl flex items-center gap-3 border border-red-100 animate-in slide-in-from-bottom-4">
-              <AlertCircle size={20} className="text-red-600" />
-              <span className="font-bold text-sm">{error}</span>
-            </div>
-          )}
-
           <div className="p-8 bg-white border-t border-slate-50">
             <div className="flex items-center gap-4">
-              <button 
-                onClick={toggleListening} 
-                className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
-                  isListening ? 'bg-red-500 text-white shadow-lg animate-pulse' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                }`}
-              >
+              <button onClick={toggleListening} className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${isListening ? 'bg-rose-500 text-white shadow-lg animate-pulse' : 'bg-slate-100 text-slate-400'}`}>
                 {isListening ? <MicOff size={24} /> : <Mic size={24} />}
               </button>
-              <form 
-                onSubmit={(e) => { e.preventDefault(); handleSendMessage(input); }} 
-                className="relative flex-1"
-              >
+              <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(input); }} className="relative flex-1">
                 <input 
                   type="text" 
                   value={input} 
@@ -214,11 +185,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                   placeholder={t.ask_joy} 
                   className="w-full pl-6 pr-16 py-5 bg-slate-100 border-none rounded-2xl focus:ring-2 focus:ring-blue-500/20 font-bold text-lg" 
                 />
-                <button 
-                  type="submit" 
-                  disabled={!input.trim() || isTyping} 
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md disabled:opacity-50 hover:scale-105 transition-all"
-                >
+                <button type="submit" disabled={!input.trim() || isTyping} className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md disabled:opacity-50">
                   <Send size={20} />
                 </button>
               </form>
@@ -226,24 +193,25 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
           </div>
         </div>
 
-        {/* Sidebar Tips */}
+        {/* Sidebar */}
         <div className="w-full lg:w-80 flex flex-col gap-6">
-          <div className="bg-blue-600 text-white p-8 rounded-[40px] shadow-2xl shadow-blue-100">
+          <div className="bg-blue-600 text-white p-8 rounded-[40px] shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <Sparkles className="text-yellow-300 mb-6" size={32} />
-            <h4 className="text-xl font-black mb-2 leading-tight">{lang === 'bn' ? 'ফ্রি এআই কোচ' : 'Free AI Coach'}</h4>
+            <h4 className="text-xl font-black mb-2 leading-tight">{lang === 'bn' ? 'এআই লাইফ কোচ' : 'AI Life Coach'}</h4>
             <p className="text-xs font-bold opacity-70 leading-relaxed">
-              {lang === 'bn' ? 'আমি আপনার দিনটি সুন্দর করতে সবসময় আপনার পাশে আছি। কোনো এপিআই কী-এর প্রয়োজন নেই!' : 'I am always here to make your day better. No API key required!'}
+              {lang === 'bn' ? 'আপনার সাফল্যের পথে আমি সবসময় আপনার সাথে আছি।' : 'I am always with you on your path to success.'}
             </p>
           </div>
 
           <div className="flex-1 bg-white/60 backdrop-blur-xl rounded-[40px] border border-blue-50 p-8 space-y-6">
-            <h5 className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-500/60">{t.quick_tips}</h5>
+            <h5 className="text-[11px] font-black uppercase tracking-widest text-blue-500/60">{t.quick_tips}</h5>
             <div className="space-y-4">
               {quickPrompts.map((item, idx) => (
                 <button 
                   key={idx} 
                   onClick={() => handleSendMessage(item.prompt)}
-                  className="w-full flex items-center gap-4 p-4 rounded-3xl bg-white border border-blue-50 hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 transition-all group"
+                  className="w-full flex items-center gap-4 p-4 rounded-3xl bg-white border border-blue-50 hover:border-blue-500 hover:shadow-xl transition-all group"
                 >
                   <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
                     {item.icon}
