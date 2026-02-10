@@ -1,56 +1,57 @@
 
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const SYSTEM_INSTRUCTION = `নাম: জয়। পরিচয়: লাইফ কোচ। নিয়ম: ১. শুধুমাত্র বাংলা ব্যবহার করুন। ২. সংক্ষেপে উত্তর দিন। ৩. বন্ধুত্বপূর্ণ আচরণ করুন। ৪. টেকনিক্যাল এপিআই নিয়ে বলবেন না।`;
+/**
+ * জয় (Joy) এর জন্য সিস্টেম ইনস্ট্রাকশন। 
+ * এটি নিশ্চিত করে যে এআই কোনো এপিআই বা টেকনিক্যাল কথা বলবে না।
+ */
+const JOY_SYSTEM_PROMPT = "আপনার নাম জয়। আপনি একজন বন্ধুসুলভ পার্সোনাল লাইফ কোচ। সবসময় সংক্ষেপে এবং মিষ্টিভাবে বাংলায় কথা বলুন। কোনো কারিগরি বা এপিআই (API) সংক্রান্ত কথা বলবেন না। ব্যবহারকারীর প্রতিটি কথার সুন্দর এবং অনুপ্রেরণামূলক উত্তর দিন।";
 
-const CHAT_MODEL = 'gemini-3-flash-preview';
-const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
+const PRIMARY_MODEL = 'gemini-3-flash-preview';
+const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
 
 /**
- * Generates a streaming response from Joy for instant feedback.
+ * সরাসরি চ্যাট করার ফাংশন। এটি স্ট্রিমিং ব্যবহার করে যাতে দ্রুত উত্তর পাওয়া যায়।
  */
 export async function* chatWithJoyStream(userMessage: string, userData: any) {
-  // Always create a fresh instance for the latest configuration
+  // সরাসরি প্রোসেস এনভায়রনমেন্ট থেকে কী ব্যবহার করা হচ্ছে
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   try {
     const responseStream = await ai.models.generateContentStream({
-      model: CHAT_MODEL,
+      model: PRIMARY_MODEL,
       contents: [{ 
         parts: [{ 
-          text: `User ${userData.userName || 'Friend'}: "${userMessage}"` 
+          text: `ব্যবহারকারী ${userData.userName || 'বন্ধু'} বলছে: "${userMessage}"` 
         }] 
       }],
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.8,
-        topK: 64,
-        topP: 0.95,
+        systemInstruction: JOY_SYSTEM_PROMPT,
+        temperature: 0.7,
+        topP: 0.9,
       },
     });
 
     for await (const chunk of responseStream) {
       const text = chunk.text;
-      if (text) {
-        yield text;
-      }
+      if (text) yield text;
     }
   } catch (error: any) {
-    console.error("Joy Connection Error:", error);
-    yield "দুঃখিত, বর্তমানে আমার সিস্টেমে একটু সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।";
+    console.error("Joy Error:", error);
+    yield "দুঃখিত, সংযোগে সামান্য সমস্যা হচ্ছে। দয়া করে ইন্টারনেট চেক করে আবার চেষ্টা করুন।";
   }
 }
 
 /**
- * Converts text to speech using Gemini TTS model.
+ * টেক্সট থেকে কথা বলা (TTS) এর ফাংশন।
  */
 export async function speakText(text: string): Promise<string | null> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   try {
     const response = await ai.models.generateContent({
-      model: TTS_MODEL,
-      contents: [{ parts: [{ text: text }] }],
+      model: VOICE_MODEL,
+      contents: [{ parts: [{ text }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
@@ -63,7 +64,7 @@ export async function speakText(text: string): Promise<string | null> {
 
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
   } catch (error: any) {
-    console.error("Joy TTS Error:", error);
+    console.error("Joy Voice Error:", error);
     return null;
   }
 }
