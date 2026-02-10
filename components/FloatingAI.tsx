@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, X, Sparkles, 
-  Minimize2, Volume2, VolumeX, Mic, MicOff, Zap
+  Minimize2, Volume2, VolumeX, Mic, MicOff, Zap, AlertCircle
 } from 'lucide-react';
 import { chatWithJoyStream, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -38,8 +38,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       const greeting = lang === 'bn' 
-        ? `নমস্কার ${userName}! আমি জয়। কীভাবে সাহায্য করতে পারি?` 
-        : `Hello ${userName}! I am Joy. How can I assist you?`;
+        ? `নমস্কার ${userName}! আমি জয়। আজ আপনাকে কীভাবে সাহায্য করতে পারি?` 
+        : `Hello ${userName}! I am Joy. How can I help you today?`;
       setMessages([{ role: 'joy', text: greeting }]);
     }
   }, [isOpen, userName, lang]);
@@ -76,7 +76,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   };
 
   const playAudioResponse = async (text: string) => {
-    if (!isVoiceEnabled) return;
+    if (!isVoiceEnabled || !text) return;
     try {
       const base64Audio = await speakText(text);
       if (base64Audio) {
@@ -111,27 +111,44 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     const userMsg = input.trim();
     if (!userMsg || isTyping) return;
 
+    // Add user message immediately
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
     setIsTyping(true);
 
-    // Initial message holder for streaming
+    // Prepare assistant message slot
     setMessages(prev => [...prev, { role: 'joy', text: '' }]);
     
     let fullResponse = '';
-    const stream = chatWithJoyStream(userMsg, { userName });
-    
-    for await (const chunk of stream) {
-      fullResponse += chunk;
+    try {
+      const stream = chatWithJoyStream(userMsg, { userName });
+      
+      let firstChunkReceived = false;
+      for await (const chunk of stream) {
+        if (!firstChunkReceived) {
+          firstChunkReceived = true;
+          // Small visual delay removal could happen here if needed
+        }
+        fullResponse += chunk;
+        setMessages(prev => {
+          const newMsgs = [...prev];
+          newMsgs[newMsgs.length - 1] = { role: 'joy', text: fullResponse };
+          return newMsgs;
+        });
+      }
+    } catch (err) {
+      console.error("Streaming error in UI:", err);
       setMessages(prev => {
         const newMsgs = [...prev];
-        newMsgs[newMsgs.length - 1] = { role: 'joy', text: fullResponse };
+        newMsgs[newMsgs.length - 1] = { role: 'joy', text: "দুঃখিত, এপিআই সংযোগে সমস্যা হচ্ছে। দয়া করে ইন্টারনেট চেক করুন।" };
         return newMsgs;
       });
+    } finally {
+      setIsTyping(false);
+      if (isVoiceEnabled && fullResponse) {
+        playAudioResponse(fullResponse);
+      }
     }
-    
-    setIsTyping(false);
-    if (isVoiceEnabled && fullResponse) await playAudioResponse(fullResponse);
   };
 
   return (
@@ -163,22 +180,20 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50 custom-scrollbar">
             {messages.map((msg, i) => (
-              msg.text && (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                  <div className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[85%]`}>
-                    <div className={`p-4 rounded-[24px] text-sm font-bold shadow-sm ${
-                      msg.role === 'user' ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
-                    }`}>
-                      {msg.text}
-                    </div>
-                    <span className="text-[9px] font-black uppercase text-slate-400 px-2">
-                      {msg.role === 'user' ? userName : t.ai_name}
-                    </span>
+              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                <div className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[85%]`}>
+                  <div className={`p-4 rounded-[24px] text-sm font-bold shadow-sm ${
+                    msg.role === 'user' ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
+                  }`}>
+                    {msg.text || (msg.role === 'joy' ? '...' : '')}
                   </div>
+                  <span className="text-[9px] font-black uppercase text-slate-400 px-2">
+                    {msg.role === 'user' ? userName : t.ai_name}
+                  </span>
                 </div>
-              )
+              </div>
             ))}
-            {isTyping && messages[messages.length - 1].text === '' && (
+            {isTyping && messages[messages.length - 1]?.text === '' && (
               <div className="flex justify-start">
                 <div className="bg-white p-4 rounded-[24px] rounded-tl-none border border-slate-100 shadow-sm flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></span>
@@ -191,7 +206,11 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
           <div className="p-6 bg-white border-t border-slate-50">
             <div className="flex items-center gap-3">
-              <button onClick={toggleListening} className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${isListening ? 'bg-rose-500 text-white shadow-lg animate-pulse' : 'bg-slate-100 text-slate-500'}`}>
+              <button 
+                type="button"
+                onClick={toggleListening} 
+                className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${isListening ? 'bg-rose-500 text-white shadow-lg animate-pulse' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+              >
                 {isListening ? <MicOff size={24} /> : <Mic size={24} />}
               </button>
               <form onSubmit={handleSendMessage} className="relative flex-1">
@@ -200,9 +219,14 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                   value={input} 
                   onChange={(e) => setInput(e.target.value)} 
                   placeholder={t.ask_joy} 
-                  className="w-full pl-6 pr-14 py-4 bg-slate-100 rounded-[20px] font-bold outline-none border-2 border-transparent focus:border-blue-500/10" 
+                  className="w-full pl-6 pr-14 py-4 bg-slate-100 rounded-[20px] font-bold outline-none border-2 border-transparent focus:border-blue-500/10 focus:bg-white transition-all" 
+                  disabled={isTyping}
                 />
-                <button type="submit" disabled={!input.trim() || isTyping} className="absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-11 bg-orange-400 text-white rounded-xl flex items-center justify-center shadow-md disabled:opacity-50">
+                <button 
+                  type="submit" 
+                  disabled={!input.trim() || isTyping} 
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-11 bg-orange-400 text-white rounded-xl flex items-center justify-center shadow-md disabled:opacity-50 hover:bg-orange-500 transition-colors"
+                >
                   <Send size={20} />
                 </button>
               </form>
@@ -218,7 +242,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
             <X size={28} />
           </button>
         ) : (
-          <div className="relative w-20 h-24 flex items-center justify-center">
+          <div className="relative w-20 h-24 flex items-center justify-center transition-transform hover:scale-110">
             <div className="absolute bottom-10 animate-balloon">
               <div className="absolute -left-6 bottom-4 w-8 h-10 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-full shadow-lg border border-white/20 animate-balloon delay-1 group-hover:scale-110 transition-transform">
                 <div className="absolute bottom-[-15px] left-1/2 -translate-x-1/2 w-[1px] h-12 bg-slate-400/30"></div>
