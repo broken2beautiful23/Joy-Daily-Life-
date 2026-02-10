@@ -102,7 +102,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         source.start();
       }
     } catch (err) {
-      console.error("Audio error:", err);
+      console.error("Audio playback error:", err);
     }
   };
 
@@ -115,6 +115,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     setInput('');
     setIsTyping(true);
 
+    // AI উত্তরের জন্য প্লেসহোল্ডার মেসেজ যোগ করা
     setMessages(prev => [...prev, { role: 'joy', text: '' }]);
     
     let fullText = '';
@@ -129,10 +130,10 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         });
       }
     } catch (err) {
-      console.error("Stream error:", err);
+      console.error("Joy Error:", err);
       setMessages(prev => {
         const updated = [...prev];
-        updated[updated.length - 1] = { role: 'joy', text: "দুঃখিত, সংযোগে সমস্যা হচ্ছে। আবার চেষ্টা করুন।" };
+        updated[updated.length - 1] = { role: 'joy', text: "দুঃখিত, সংযোগে সমস্যা হচ্ছে। আপনার ইন্টারনেট কানেকশন চেক করে আবার চেষ্টা করুন।" };
         return updated;
       });
     } finally {
@@ -173,7 +174,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                 <div className={`p-4 rounded-3xl max-w-[85%] text-sm font-bold shadow-sm ${
                   msg.role === 'user' ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                 }`}>
-                  {msg.text || (msg.role === 'joy' ? 'চিন্তা করছি...' : '')}
+                  {msg.text || (msg.role === 'joy' ? 'জয় উত্তর দিচ্ছে...' : '')}
                 </div>
               </div>
             ))}
