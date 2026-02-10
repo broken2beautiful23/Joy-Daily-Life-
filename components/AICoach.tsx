@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, Sparkles, Mic, MicOff, Volume2, VolumeX, 
-  Bot, User, Loader2, Zap, ArrowRight, Lightbulb, Wallet, Calendar, Key, AlertCircle
+  Bot, User, Loader2, Zap, ArrowRight, Lightbulb, Wallet, Calendar, AlertCircle
 } from 'lucide-react';
 import { chatWithJoy, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -76,18 +76,6 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     }
   };
 
-  const handleSelectKey = async () => {
-    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
-      try {
-        await window.aistudio.openSelectKey();
-        setError(null);
-        setMessages([]); // Trigger re-greeting
-      } catch (e) {
-        console.error("Key selection failed", e);
-      }
-    }
-  };
-
   const playAudioResponse = async (text: string) => {
     if (!isVoiceEnabled) return;
     try {
@@ -132,11 +120,9 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
       setMessages(prev => [...prev, { role: 'joy', text: response }]);
       if (isVoiceEnabled) await playAudioResponse(response);
     } catch (error: any) {
-      const errorMsg = error.message?.toLowerCase() || "";
-      if (errorMsg.includes("404") || errorMsg.includes("not found") || errorMsg.includes("api key")) {
-        setError(lang === 'bn' ? "কানেকশন এরর। অনুগ্রহ করে এপিআই কী চেক করুন।" : "Connection error. Please check API key.");
-      }
-      setMessages(prev => [...prev, { role: 'joy', text: lang === 'bn' ? "দুঃখিত, কানেকশনে সমস্যা হচ্ছে। এপিআই কী চেক করুন।" : "Sorry, connection issue. Please check API key." }]);
+      console.error("Chat Error:", error);
+      setError(lang === 'bn' ? "কানেকশন এরর। অনুগ্রহ করে আবার চেষ্টা করুন।" : "Connection error. Please try again.");
+      setMessages(prev => [...prev, { role: 'joy', text: lang === 'bn' ? "দুঃখিত, কানেকশনে সমস্যা হচ্ছে।" : "Sorry, connection issue." }]);
     } finally {
       setIsTyping(false);
     }
@@ -201,14 +187,9 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
           </div>
 
           {error && (
-            <div className="mx-8 mb-4 p-4 bg-amber-50 rounded-2xl flex items-center justify-between gap-4 border border-amber-100 animate-in slide-in-from-bottom-4">
-              <div className="flex items-center gap-3 text-amber-900 font-bold text-sm">
-                <AlertCircle size={20} className="text-amber-600" />
-                {error}
-              </div>
-              <button onClick={handleSelectKey} className="flex items-center gap-2 bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-md hover:bg-amber-700 transition-all">
-                <Key size={14} /> {lang === 'bn' ? 'কী সেট করুন' : 'Set Key'}
-              </button>
+            <div className="mx-8 mb-4 p-4 bg-red-50 text-red-700 rounded-2xl flex items-center gap-3 border border-red-100 animate-in slide-in-from-bottom-4">
+              <AlertCircle size={20} className="text-red-600" />
+              <span className="font-bold text-sm">{error}</span>
             </div>
           )}
 
@@ -251,7 +232,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
             <Sparkles className="text-yellow-300 mb-6" size={32} />
             <h4 className="text-xl font-black mb-2 leading-tight">{lang === 'bn' ? 'ফ্রি এআই কোচ' : 'Free AI Coach'}</h4>
             <p className="text-xs font-bold opacity-70 leading-relaxed">
-              {lang === 'bn' ? 'আমি আপনার দিনটি সুন্দর করতে সবসময় আপনার পাশে আছি। যেকোনো বিষয় নিয়ে কথা বলুন!' : 'I am always here to make your day better. Talk to me about anything!'}
+              {lang === 'bn' ? 'আমি আপনার দিনটি সুন্দর করতে সবসময় আপনার পাশে আছি। কোনো এপিআই কী-এর প্রয়োজন নেই!' : 'I am always here to make your day better. No API key required!'}
             </p>
           </div>
 

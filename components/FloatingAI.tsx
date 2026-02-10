@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, X, Loader2, Sparkles, 
-  Minimize2, Volume2, VolumeX, Mic, MicOff, AlertCircle, Key, Info, Zap
+  Minimize2, Volume2, VolumeX, Mic, MicOff, AlertCircle, Zap
 } from 'lucide-react';
 import { chatWithJoy, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -27,13 +27,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   const recognitionRef = useRef<any>(null);
   const t = translations[lang];
 
-  const basicResponses = [
-    lang === 'bn' ? "আজকের দিনটি আপনার জন্য দারুণ হোক! কী সাহায্য করতে পারি?" : "Have a great day! How can I help you?",
-    lang === 'bn' ? "আপনার লক্ষ্যগুলো নিয়ে কাজ শুরু করেছেন কি?" : "Have you started working on your goals today?",
-    lang === 'bn' ? "মনে রাখবেন, আজকের ছোট পদক্ষেপই আগামীর বড় সাফল্য।" : "Remember, small steps today lead to big success tomorrow.",
-    lang === 'bn' ? "নিজেকে সময় দিন, অন্তত ১৫ মিনিট বই পড়ুন।" : "Give yourself time, read for at least 15 minutes.",
-  ];
-
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({
@@ -47,8 +40,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     if (isOpen && messages.length === 0) {
       setTimeout(() => {
         const greeting = lang === 'bn' 
-          ? `নমস্কার ${userName}! আমি জয় কুমার বিশ্বাস। আপনার দিনটি কেমন যাচ্ছে?` 
-          : `Hello ${userName}! I am Joy Kumar Biswas. How is your day going?`;
+          ? `নমস্কার ${userName}! আমি জয় কুমার বিশ্বাস। আজ আপনাকে কীভাবে সাহায্য করতে পারি?` 
+          : `Hello ${userName}! I am Joy Kumar Biswas. How can I help you today?`;
         setMessages([{ role: 'joy', text: greeting }]);
       }, 600);
     }
@@ -83,21 +76,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         setIsListening(true);
       } catch (e) {
         console.error("Speech recognition start failed:", e);
-      }
-    }
-  };
-
-  const handleSelectKey = async () => {
-    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
-      try {
-        await window.aistudio.openSelectKey();
-        setError(null);
-        // Reset state to try again
-        setMessages([]);
-        setIsOpen(false);
-        setTimeout(() => setIsOpen(true), 100);
-      } catch (e) {
-        console.error("Key selection failed", e);
       }
     }
   };
@@ -150,18 +128,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
       if (isVoiceEnabled) await playAudioResponse(response);
     } catch (error: any) {
       console.error("AI Error:", error);
-      const errorMsg = error.message?.toLowerCase() || "";
-      const isEntityNotFoundError = errorMsg.includes("requested entity was not found") || errorMsg.includes("404");
-      const isApiKeyError = errorMsg.includes("api key") || errorMsg.includes("401") || errorMsg.includes("403");
-      
-      if (isEntityNotFoundError || isApiKeyError) {
-        setError(lang === 'bn' ? "আপনার এপিআই কী-তে সমস্যা। ফ্রিতে ঠিক করতে এখানে ক্লিক করুন।" : "API Key Issue. Click to fix for free.");
-      } else {
-        setError(lang === 'bn' ? "কানেকশন এরর। অনুগ্রহ করে নেটওয়ার্ক চেক করুন।" : "Connection error. Please check your network.");
-      }
-      
-      const randomFallback = basicResponses[Math.floor(Math.random() * basicResponses.length)];
-      setMessages(prev => [...prev, { role: 'joy', text: randomFallback }]);
+      setError(lang === 'bn' ? "সাময়িক সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।" : "Service temporarily unavailable. Please try again.");
+      setMessages(prev => [...prev, { role: 'joy', text: lang === 'bn' ? "দুঃখিত, আমি এই মুহূর্তে উত্তর দিতে পারছি না।" : "Sorry, I am unable to respond at this moment." }]);
     } finally {
       setIsTyping(false);
     }
@@ -223,19 +191,9 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
           </div>
 
           {error && (
-            <div className="mx-4 mb-4 p-5 bg-gradient-to-br from-amber-50 to-orange-50 text-amber-900 rounded-[24px] text-[11px] font-bold border border-amber-100 shadow-sm animate-in zoom-in duration-300">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="p-1.5 bg-amber-200 rounded-lg text-amber-700"><AlertCircle size={16} /></div>
-                <span className="leading-tight">{error}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={handleSelectKey} className="py-2.5 bg-amber-600 text-white rounded-xl flex items-center justify-center gap-2 hover:bg-amber-700 transition-colors font-black text-[10px] uppercase tracking-wider">
-                  <Key size={12} /> {lang === 'bn' ? 'কী সেট করুন' : 'Set Key'}
-                </button>
-                <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="py-2.5 bg-white text-amber-700 border border-amber-200 rounded-xl flex items-center justify-center gap-2 hover:bg-amber-50 transition-colors font-black text-[10px] uppercase tracking-wider">
-                  <Info size={12} /> {lang === 'bn' ? 'কী পাবেন?' : 'Get Key'}
-                </a>
-              </div>
+            <div className="mx-4 mb-4 p-4 bg-red-50 text-red-700 rounded-2xl text-[11px] font-bold border border-red-100 flex items-center gap-2 animate-in zoom-in duration-300">
+              <AlertCircle size={16} />
+              <span>{error}</span>
             </div>
           )}
 

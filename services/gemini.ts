@@ -10,35 +10,11 @@ const MODEL_TEXT = 'gemini-3-flash-preview';
 const MODEL_TTS = 'gemini-2.5-flash-preview-tts';
 
 /**
- * Creates a fresh instance of GoogleGenAI to ensure updated API context.
+ * The Google GenAI SDK instance initialized with the system API key.
  */
 const getAIInstance = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
-
-export async function generateDailySummary(data: any) {
-  const ai = getAIInstance();
-  
-  const prompt = `
-    নিচের ডাটা বিশ্লেষণ করে ব্যবহারকারীর দিনের একটি মোটিভেশনাল সামারি দিন এবং আগামীকালের জন্য পরামর্শ দিন:
-    ডাটা: ${JSON.stringify(data)}
-  `;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: MODEL_TEXT,
-      contents: prompt,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.7,
-      },
-    });
-    return response.text || "আপনার প্রচেষ্টা আপনাকে অনেক দূরে নিয়ে যাবে। এগিয়ে যান!";
-  } catch (error: any) {
-    console.error("AI Insight Error:", error);
-    return "আজকের দিনটি আপনার জন্য একটি নতুন অভিজ্ঞতা ছিল। আগামীকাল আরও ভালো করার চেষ্টা করুন!";
-  }
-}
 
 export async function chatWithJoy(userMessage: string, userData: any) {
   const ai = getAIInstance();
