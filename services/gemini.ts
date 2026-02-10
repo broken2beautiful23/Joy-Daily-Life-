@@ -1,43 +1,40 @@
 
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const SYSTEM_INSTRUCTION = `আপনার নাম জয় কুমার বিশ্বাস। আপনি একজন প্রফেশনাল লাইফ কোচ এবং প্রোডাক্টিভিটি এক্সপার্ট। 
-আপনার ব্যবহারকারীদের সাথে কথা বলার ভঙ্গি হবে অত্যন্ত বন্ধুত্বপূর্ণ, সহমর্মী এবং সংক্ষিপ্ত। 
-আপনি সবসময় ব্যবহারকারীকে উৎসাহ দেবেন এবং তাদের সমস্যার সহজ সমাধান দেবেন। 
-যদি কোনো গাণিতিক সমস্যা (যেমন: ২+২) থাকে, তবে সরাসরি সঠিক উত্তর দিন। 
-সবসময় বাংলা ভাষায় উত্তর দিন, যদি না ব্যবহারকারী ইংরেজিতে জিজ্ঞাসা করেন। 
-এটি একটি ডেমো এবং ফুল সার্ভিস ভার্সন, তাই কোনো এপিআই কী বা টেকনিক্যাল বিষয় নিয়ে ব্যবহারকারীকে কিছু বলার প্রয়োজন নেই।`;
+const SYSTEM_INSTRUCTION = `আপনার নাম জয় কুমার বিশ্বাস। প্রফেশনাল লাইফ কোচ। সংক্ষেপে এবং বন্ধুত্বপূর্ণভাবে বাংলা ভাষায় কথা বলুন। গাণিতিক সমস্যার সরাসরি উত্তর দিন। কোনো এপিআই বা টেকনিক্যাল বিষয় নিয়ে কথা বলবেন না।`;
 
 const CHAT_MODEL = 'gemini-3-flash-preview';
 const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 
 /**
- * Generates a response from Joy using the system API key.
+ * Generates a streaming response from Joy using the system API key.
  */
-export async function chatWithJoy(userMessage: string, userData: any) {
-  // Always create a fresh instance using the pre-configured environment key
+export async function* chatWithJoyStream(userMessage: string, userData: any) {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   try {
-    const response = await ai.models.generateContent({
+    const responseStream = await ai.models.generateContentStream({
       model: CHAT_MODEL,
       contents: [{ 
         parts: [{ 
-          text: `User context: Name is ${userData.userName || 'Friend'}. User message: "${userMessage}"` 
+          text: `User: ${userData.userName || 'Friend'}. Message: "${userMessage}"` 
         }] 
       }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.7,
+        topK: 40,
         topP: 0.9,
       },
     });
 
-    return response.text || "দুঃখিত, আমি ঠিক বুঝতে পারছি না। দয়া করে আবার চেষ্টা করুন।";
+    for await (const chunk of responseStream) {
+      const text = chunk.text;
+      if (text) yield text;
+    }
   } catch (error: any) {
-    console.error("Gemini Error:", error);
-    // Generic friendly error for demo experience
-    return "আমি এই মুহূর্তে সংযোগ করতে পারছি না। দয়া করে কয়েক সেকেন্ড পর আবার মেসেজ দিন।";
+    console.error("Gemini Stream Error:", error);
+    yield "দুঃখিত, সংযোগে সমস্যা হচ্ছে।";
   }
 }
 
@@ -50,7 +47,7 @@ export async function speakText(text: string): Promise<string | null> {
   try {
     const response = await ai.models.generateContent({
       model: TTS_MODEL,
-      contents: [{ parts: [{ text: `Say clearly: ${text}` }] }],
+      contents: [{ parts: [{ text: `Say: ${text}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
@@ -61,8 +58,7 @@ export async function speakText(text: string): Promise<string | null> {
       },
     });
 
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    return base64Audio || null;
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
   } catch (error: any) {
     console.error("Gemini TTS Error:", error);
     return null;

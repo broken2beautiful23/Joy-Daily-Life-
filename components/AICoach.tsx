@@ -4,7 +4,7 @@ import {
   Send, Sparkles, Mic, MicOff, Volume2, VolumeX, 
   Bot, User, Loader2, Zap, ArrowRight, Lightbulb, Wallet, Calendar
 } from 'lucide-react';
-import { chatWithJoy, speakText } from '../services/gemini';
+import { chatWithJoyStream, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
 import { AI_AVATAR_URL } from '../constants';
 
@@ -36,8 +36,8 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
 
   useEffect(() => {
     const greeting = lang === 'bn' 
-      ? `নমস্কার ${userName}! আমি জয়। আজ আমি আপনার দিনটি সফল করতে কী করতে পারি?` 
-      : `Hello ${userName}! I am Joy. How can I help you make today a success?`;
+      ? `নমস্কার ${userName}! আমি জয়। আজ কীভাবে সাহায্য করতে পারি?` 
+      : `Hello ${userName}! I am Joy. How can I help you today?`;
     if (messages.length === 0) setMessages([{ role: 'joy', text: greeting }]);
   }, [lang, userName, messages.length]);
 
@@ -110,10 +110,23 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     setInput('');
     setIsTyping(true);
 
-    const response = await chatWithJoy(userMsg, { userName });
-    setMessages(prev => [...prev, { role: 'joy', text: response }]);
+    // Initial message holder for streaming
+    setMessages(prev => [...prev, { role: 'joy', text: '' }]);
+    
+    let fullResponse = '';
+    const stream = chatWithJoyStream(userMsg, { userName });
+    
+    for await (const chunk of stream) {
+      fullResponse += chunk;
+      setMessages(prev => {
+        const newMsgs = [...prev];
+        newMsgs[newMsgs.length - 1] = { role: 'joy', text: fullResponse };
+        return newMsgs;
+      });
+    }
+
     setIsTyping(false);
-    if (isVoiceEnabled) await playAudioResponse(response);
+    if (isVoiceEnabled && fullResponse) await playAudioResponse(fullResponse);
   };
 
   const quickPrompts = [
@@ -126,7 +139,6 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     <div className="max-w-5xl mx-auto h-[calc(100vh-180px)] flex flex-col gap-6 animate-in fade-in duration-700">
       <div className="flex-1 flex flex-col lg:flex-row gap-8 overflow-hidden">
         
-        {/* Chat Area */}
         <div className="flex-1 bg-white/70 backdrop-blur-2xl rounded-[40px] border border-blue-50 shadow-2xl flex flex-col overflow-hidden">
           <div className="p-6 bg-blue-600 text-white flex items-center justify-between shadow-md relative z-10">
             <div className="flex items-center gap-4">
@@ -145,23 +157,25 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50/30 custom-scrollbar">
             {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
-                <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div className={`p-5 rounded-[32px] text-base font-bold shadow-sm whitespace-pre-wrap leading-relaxed ${
-                    msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
-                  }`}>
-                    {msg.text}
-                  </div>
-                  <div className="flex items-center gap-2 px-3">
-                    {msg.role === 'joy' ? <Bot size={12} className="text-blue-500" /> : <User size={12} className="text-slate-400" />}
-                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                      {msg.role === 'user' ? userName : t.ai_name}
-                    </span>
+              msg.text && (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
+                  <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                    <div className={`p-5 rounded-[32px] text-base font-bold shadow-sm whitespace-pre-wrap leading-relaxed ${
+                      msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
+                    }`}>
+                      {msg.text}
+                    </div>
+                    <div className="flex items-center gap-2 px-3">
+                      {msg.role === 'joy' ? <Bot size={12} className="text-blue-500" /> : <User size={12} className="text-slate-400" />}
+                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                        {msg.role === 'user' ? userName : t.ai_name}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )
             ))}
-            {isTyping && (
+            {isTyping && messages[messages.length - 1].text === '' && (
               <div className="flex justify-start">
                 <div className="bg-white p-5 rounded-[32px] rounded-tl-none border border-slate-100 shadow-sm flex items-center gap-2">
                   <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></span>
@@ -193,7 +207,6 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
           </div>
         </div>
 
-        {/* Sidebar */}
         <div className="w-full lg:w-80 flex flex-col gap-6">
           <div className="bg-blue-600 text-white p-8 rounded-[40px] shadow-2xl relative overflow-hidden group">
             <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>

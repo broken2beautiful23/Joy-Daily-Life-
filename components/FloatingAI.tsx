@@ -4,7 +4,7 @@ import {
   Send, X, Sparkles, 
   Minimize2, Volume2, VolumeX, Mic, MicOff, Zap
 } from 'lucide-react';
-import { chatWithJoy, speakText } from '../services/gemini';
+import { chatWithJoyStream, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
 import { AI_AVATAR_URL } from '../constants';
 
@@ -38,8 +38,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       const greeting = lang === 'bn' 
-        ? `নমস্কার ${userName}! আমি জয়। আজ আমি আপনাকে কীভাবে সাহায্য করতে পারি?` 
-        : `Hello ${userName}! I am Joy. How can I assist you today?`;
+        ? `নমস্কার ${userName}! আমি জয়। কীভাবে সাহায্য করতে পারি?` 
+        : `Hello ${userName}! I am Joy. How can I assist you?`;
       setMessages([{ role: 'joy', text: greeting }]);
     }
   }, [isOpen, userName, lang]);
@@ -115,10 +115,23 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     setInput('');
     setIsTyping(true);
 
-    const response = await chatWithJoy(userMsg, { userName });
-    setMessages(prev => [...prev, { role: 'joy', text: response }]);
+    // Initial message holder for streaming
+    setMessages(prev => [...prev, { role: 'joy', text: '' }]);
+    
+    let fullResponse = '';
+    const stream = chatWithJoyStream(userMsg, { userName });
+    
+    for await (const chunk of stream) {
+      fullResponse += chunk;
+      setMessages(prev => {
+        const newMsgs = [...prev];
+        newMsgs[newMsgs.length - 1] = { role: 'joy', text: fullResponse };
+        return newMsgs;
+      });
+    }
+    
     setIsTyping(false);
-    if (isVoiceEnabled) await playAudioResponse(response);
+    if (isVoiceEnabled && fullResponse) await playAudioResponse(fullResponse);
   };
 
   return (
@@ -150,20 +163,22 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50 custom-scrollbar">
             {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                <div className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[85%]`}>
-                  <div className={`p-4 rounded-[24px] text-sm font-bold shadow-sm ${
-                    msg.role === 'user' ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
-                  }`}>
-                    {msg.text}
+              msg.text && (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                  <div className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[85%]`}>
+                    <div className={`p-4 rounded-[24px] text-sm font-bold shadow-sm ${
+                      msg.role === 'user' ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
+                    }`}>
+                      {msg.text}
+                    </div>
+                    <span className="text-[9px] font-black uppercase text-slate-400 px-2">
+                      {msg.role === 'user' ? userName : t.ai_name}
+                    </span>
                   </div>
-                  <span className="text-[9px] font-black uppercase text-slate-400 px-2">
-                    {msg.role === 'user' ? userName : t.ai_name}
-                  </span>
                 </div>
-              </div>
+              )
             ))}
-            {isTyping && (
+            {isTyping && messages[messages.length - 1].text === '' && (
               <div className="flex justify-start">
                 <div className="bg-white p-4 rounded-[24px] rounded-tl-none border border-slate-100 shadow-sm flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></span>
@@ -204,29 +219,21 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
           </button>
         ) : (
           <div className="relative w-20 h-24 flex items-center justify-center">
-            {/* Balloon Cluster */}
             <div className="absolute bottom-10 animate-balloon">
-              {/* Balloon 1 - Blue */}
               <div className="absolute -left-6 bottom-4 w-8 h-10 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-full shadow-lg border border-white/20 animate-balloon delay-1 group-hover:scale-110 transition-transform">
                 <div className="absolute bottom-[-15px] left-1/2 -translate-x-1/2 w-[1px] h-12 bg-slate-400/30"></div>
                 <div className="absolute top-1 left-2 w-2 h-2 bg-white/40 rounded-full blur-[1px]"></div>
               </div>
-              
-              {/* Balloon 2 - Violet (Main) */}
               <div className="absolute left-0 bottom-8 w-10 h-12 bg-gradient-to-tr from-violet-600 to-violet-400 rounded-full shadow-xl border border-white/30 animate-balloon delay-2 group-hover:scale-110 transition-transform flex items-center justify-center">
                 <div className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 w-[1px] h-16 bg-slate-400/30"></div>
                 <Sparkles size={14} className="text-white animate-pulse" />
                 <div className="absolute top-1.5 left-2.5 w-3 h-3 bg-white/40 rounded-full blur-[1px]"></div>
               </div>
-
-              {/* Balloon 3 - Amber */}
               <div className="absolute -right-6 bottom-4 w-8 h-10 bg-gradient-to-tr from-orange-500 to-amber-400 rounded-full shadow-lg border border-white/20 animate-balloon delay-3 group-hover:scale-110 transition-transform">
                 <div className="absolute bottom-[-15px] left-1/2 -translate-x-1/2 w-[1px] h-12 bg-slate-400/30"></div>
                 <div className="absolute top-1 left-2 w-2 h-2 bg-white/40 rounded-full blur-[1px]"></div>
               </div>
             </div>
-            
-            {/* Online Indicator */}
             {!isOpen && (
               <div className="absolute top-0 right-2 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white shadow-sm z-20"></div>
             )}
