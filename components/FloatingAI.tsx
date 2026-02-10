@@ -27,7 +27,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   const recognitionRef = useRef<any>(null);
   const t = translations[lang];
 
-  // Fallback responses when API fails or is not set up
   const basicResponses = [
     lang === 'bn' ? "আজকের দিনটি আপনার জন্য দারুণ হোক! কী সাহায্য করতে পারি?" : "Have a great day! How can I help you?",
     lang === 'bn' ? "আপনার লক্ষ্যগুলো নিয়ে কাজ শুরু করেছেন কি?" : "Have you started working on your goals today?",
@@ -45,7 +44,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   }, [messages, isTyping]);
 
   useEffect(() => {
-    // Proactive greeting when chat opens for the first time
     if (isOpen && messages.length === 0) {
       setTimeout(() => {
         const greeting = lang === 'bn' 
@@ -54,7 +52,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         setMessages([{ role: 'joy', text: greeting }]);
       }, 600);
     }
-  }, [isOpen]);
+  }, [isOpen, userName, lang]);
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -94,7 +92,10 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
       try {
         await window.aistudio.openSelectKey();
         setError(null);
-        setIsTyping(false);
+        // Reset state to try again
+        setMessages([]);
+        setIsOpen(false);
+        setTimeout(() => setIsOpen(true), 100);
       } catch (e) {
         console.error("Key selection failed", e);
       }
@@ -103,9 +104,9 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
   const playAudioResponse = async (text: string) => {
     if (!isVoiceEnabled) return;
-    const base64Audio = await speakText(text);
-    if (base64Audio) {
-      try {
+    try {
+      const base64Audio = await speakText(text);
+      if (base64Audio) {
         if (!audioContextRef.current) {
           audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
         }
@@ -126,9 +127,9 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         source.buffer = buffer;
         source.connect(ctx.destination);
         source.start();
-      } catch (err) {
-        console.error("Audio playback failed:", err);
       }
+    } catch (err) {
+      console.error("Audio playback failed:", err);
     }
   };
 
@@ -144,22 +145,21 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     setIsTyping(true);
 
     try {
-      // Try to get real AI response
       const response = await chatWithJoy(userMsg, { userName });
       setMessages(prev => [...prev, { role: 'joy', text: response }]);
       if (isVoiceEnabled) await playAudioResponse(response);
     } catch (error: any) {
-      // If AI fails, use fallback and show help
+      console.error("AI Error:", error);
       const errorMsg = error.message?.toLowerCase() || "";
       const isEntityNotFoundError = errorMsg.includes("requested entity was not found") || errorMsg.includes("404");
+      const isApiKeyError = errorMsg.includes("api key") || errorMsg.includes("401") || errorMsg.includes("403");
       
-      if (isEntityNotFoundError) {
+      if (isEntityNotFoundError || isApiKeyError) {
         setError(lang === 'bn' ? "আপনার এপিআই কী-তে সমস্যা। ফ্রিতে ঠিক করতে এখানে ক্লিক করুন।" : "API Key Issue. Click to fix for free.");
       } else {
-        setError(lang === 'bn' ? "কানেকশন এরর। অনুগ্রহ করে আপনার এপিআই কী চেক করুন।" : "Connection error. Please check your API key.");
+        setError(lang === 'bn' ? "কানেকশন এরর। অনুগ্রহ করে নেটওয়ার্ক চেক করুন।" : "Connection error. Please check your network.");
       }
       
-      // Provide a basic fallback response so the assistant isn't "broken"
       const randomFallback = basicResponses[Math.floor(Math.random() * basicResponses.length)];
       setMessages(prev => [...prev, { role: 'joy', text: randomFallback }]);
     } finally {
@@ -232,7 +232,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                 <button onClick={handleSelectKey} className="py-2.5 bg-amber-600 text-white rounded-xl flex items-center justify-center gap-2 hover:bg-amber-700 transition-colors font-black text-[10px] uppercase tracking-wider">
                   <Key size={12} /> {lang === 'bn' ? 'কী সেট করুন' : 'Set Key'}
                 </button>
-                <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" className="py-2.5 bg-white text-amber-700 border border-amber-200 rounded-xl flex items-center justify-center gap-2 hover:bg-amber-50 transition-colors font-black text-[10px] uppercase tracking-wider">
+                <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="py-2.5 bg-white text-amber-700 border border-amber-200 rounded-xl flex items-center justify-center gap-2 hover:bg-amber-50 transition-colors font-black text-[10px] uppercase tracking-wider">
                   <Info size={12} /> {lang === 'bn' ? 'কী পাবেন?' : 'Get Key'}
                 </a>
               </div>

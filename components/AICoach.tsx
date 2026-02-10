@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, Sparkles, Mic, MicOff, Volume2, VolumeX, 
-  Bot, User, Loader2, Zap, ArrowRight, Lightbulb, Wallet, Calendar
+  Bot, User, Loader2, Zap, ArrowRight, Lightbulb, Wallet, Calendar, Key, AlertCircle
 } from 'lucide-react';
 import { chatWithJoy, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -19,6 +19,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [isListening, setIsListening] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -42,10 +43,10 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     if (messages.length === 0) {
       setMessages([{ role: 'joy', text: initialGreeting }]);
     }
-  }, [lang, userName]);
+  }, [lang, userName, messages.length]);
 
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
@@ -75,11 +76,23 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     }
   };
 
+  const handleSelectKey = async () => {
+    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+      try {
+        await window.aistudio.openSelectKey();
+        setError(null);
+        setMessages([]); // Trigger re-greeting
+      } catch (e) {
+        console.error("Key selection failed", e);
+      }
+    }
+  };
+
   const playAudioResponse = async (text: string) => {
     if (!isVoiceEnabled) return;
-    const base64Audio = await speakText(text);
-    if (base64Audio) {
-      try {
+    try {
+      const base64Audio = await speakText(text);
+      if (base64Audio) {
         if (!audioContextRef.current) {
           audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
         }
@@ -100,9 +113,9 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
         source.buffer = buffer;
         source.connect(ctx.destination);
         source.start();
-      } catch (err) {
-        console.error("Audio playback error:", err);
       }
+    } catch (err) {
+      console.error("Audio playback error:", err);
     }
   };
 
@@ -112,13 +125,18 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
     setIsTyping(true);
+    setError(null);
 
     try {
       const response = await chatWithJoy(userMsg, { userName });
       setMessages(prev => [...prev, { role: 'joy', text: response }]);
       if (isVoiceEnabled) await playAudioResponse(response);
-    } catch (error) {
-      setMessages(prev => [...prev, { role: 'joy', text: lang === 'bn' ? "দুঃখিত, কোনো সমস্যা হয়েছে।" : "Sorry, something went wrong." }]);
+    } catch (error: any) {
+      const errorMsg = error.message?.toLowerCase() || "";
+      if (errorMsg.includes("404") || errorMsg.includes("not found") || errorMsg.includes("api key")) {
+        setError(lang === 'bn' ? "কানেকশন এরর। অনুগ্রহ করে এপিআই কী চেক করুন।" : "Connection error. Please check API key.");
+      }
+      setMessages(prev => [...prev, { role: 'joy', text: lang === 'bn' ? "দুঃখিত, কানেকশনে সমস্যা হচ্ছে। এপিআই কী চেক করুন।" : "Sorry, connection issue. Please check API key." }]);
     } finally {
       setIsTyping(false);
     }
@@ -181,6 +199,18 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
               </div>
             )}
           </div>
+
+          {error && (
+            <div className="mx-8 mb-4 p-4 bg-amber-50 rounded-2xl flex items-center justify-between gap-4 border border-amber-100 animate-in slide-in-from-bottom-4">
+              <div className="flex items-center gap-3 text-amber-900 font-bold text-sm">
+                <AlertCircle size={20} className="text-amber-600" />
+                {error}
+              </div>
+              <button onClick={handleSelectKey} className="flex items-center gap-2 bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-md hover:bg-amber-700 transition-all">
+                <Key size={14} /> {lang === 'bn' ? 'কী সেট করুন' : 'Set Key'}
+              </button>
+            </div>
+          )}
 
           <div className="p-8 bg-white border-t border-slate-50">
             <div className="flex items-center gap-4">
