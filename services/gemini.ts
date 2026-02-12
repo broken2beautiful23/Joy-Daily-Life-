@@ -7,15 +7,16 @@ const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
 
 /**
- * Checks if the API key is available in the environment.
+ * Checks if the API key is currently available in the environment.
  */
 export const isApiKeyAvailable = () => {
   const key = process.env.API_KEY;
-  return !!key && key !== "undefined";
+  return !!key && key !== "undefined" && key.length > 5;
 };
 
 /**
- * Chat stream generator.
+ * Chat stream generator. Creates a new instance every time to ensure
+ * it picks up the latest API key from the selection dialog.
  */
 export async function* chatWithJoyStream(userMessage: string, userData: any) {
   const apiKey = process.env.API_KEY;
@@ -24,7 +25,6 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
     throw new Error("KEY_MISSING");
   }
 
-  // Create instance right before use to ensure latest key from dialog is used
   const ai = new GoogleGenAI({ apiKey });
   
   try {
@@ -48,13 +48,13 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
       }
     }
   } catch (error: any) {
-    console.error("Gemini stream error:", error);
+    console.error("Gemini connection error:", error);
     throw error;
   }
 }
 
 /**
- * Text-to-speech function.
+ * Text-to-speech function using the latest API key.
  */
 export async function speakText(text: string): Promise<string | null> {
   const apiKey = process.env.API_KEY;
@@ -78,7 +78,7 @@ export async function speakText(text: string): Promise<string | null> {
 
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
   } catch (error: any) {
-    console.error("Joy Voice error:", error);
+    console.error("Voice playback error:", error);
     return null;
   }
 }

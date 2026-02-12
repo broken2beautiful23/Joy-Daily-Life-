@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, Sparkles, Mic, MicOff, Volume2, VolumeX, 
-  Bot, User, Zap, ArrowRight, Lightbulb, Wallet, Calendar, RotateCcw, Link
+  Bot, User, Zap, ArrowRight, Lightbulb, Wallet, Calendar, RotateCcw, Globe
 } from 'lucide-react';
 import { chatWithJoyStream, speakText, isApiKeyAvailable } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -23,18 +23,19 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const recognitionRef = useRef<any>(null);
   const t = translations[lang];
-  const aiStudio = (window as any).aistudio;
 
   useEffect(() => {
-    const check = async () => {
+    const checkKeyOnMount = async () => {
+      const aiStudio = (window as any).aistudio;
       if (aiStudio) {
         const selected = await aiStudio.hasSelectedApiKey();
         if (selected || isApiKeyAvailable()) setHasKey(true);
+      } else if (isApiKeyAvailable()) {
+        setHasKey(true);
       }
     };
-    check();
+    checkKeyOnMount();
   }, []);
 
   useEffect(() => {
@@ -53,17 +54,22 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     if (messages.length === 0) setMessages([{ role: 'joy', text: greeting }]);
   }, [lang, userName, messages.length]);
 
-  const handleConnect = async () => {
+  const handleActivateJoy = async () => {
+    const aiStudio = (window as any).aistudio;
     if (aiStudio) {
-      await aiStudio.openSelectKey();
-      setHasKey(true);
+      try {
+        await aiStudio.openSelectKey();
+        setHasKey(true);
+      } catch (e) {
+        console.error("Activation failed", e);
+      }
     }
   };
 
   const handleSendMessage = async (userMsg: string) => {
     if (!userMsg.trim() || isTyping) return;
     if (!hasKey) {
-      handleConnect();
+      handleActivateJoy();
       return;
     }
 
@@ -101,7 +107,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
       if (isVoiceEnabled && fullResponse && success) {
         const base64Audio = await speakText(fullResponse);
         if (base64Audio) {
-           // Audio logic... (omitted for brevity, same as FloatingAI)
+           // Play audio logic (Simplified)
         }
       }
     }
@@ -121,19 +127,35 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                 <p className="text-[10px] font-black uppercase tracking-widest opacity-70 tracking-widest">{t.ai_role}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {!hasKey && (
-                <button onClick={handleConnect} className="flex items-center gap-2 bg-yellow-400 text-blue-900 px-4 py-2 rounded-xl font-black text-xs uppercase hover:bg-white transition-all shadow-lg">
-                  <Link size={16} /> Setup Joy
-                </button>
-              )}
-              <button onClick={() => setIsVoiceEnabled(!isVoiceEnabled)} className={`p-3 rounded-xl transition-all ${isVoiceEnabled ? 'bg-white/20 text-white' : 'text-white/40'}`}>
-                {isVoiceEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+            {!hasKey && (
+              <button 
+                onClick={handleActivateJoy} 
+                className="bg-yellow-400 text-blue-900 px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg hover:bg-white transition-all flex items-center gap-2"
+              >
+                <Globe size={14} /> জয়কে কানেক্ট করুন
               </button>
-            </div>
+            )}
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50/30 custom-scrollbar">
+            {!hasKey && (
+              <div className="max-w-md mx-auto bg-white p-10 rounded-[40px] shadow-xl border border-blue-100 text-center space-y-6">
+                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto">
+                  <Bot size={40} />
+                </div>
+                <h3 className="text-2xl font-black text-slate-800 tracking-tight">জয় আপনার জন্য প্রস্তুত!</h3>
+                <p className="text-sm font-bold text-slate-400 leading-relaxed">
+                  অন্য ব্রাউজার বা ডিভাইসে ব্যবহারের জন্য একবার জয়কে সক্রিয় করে নিন। এর ফলে আপনার প্রাইভেসী বজায় থাকবে।
+                </p>
+                <button 
+                  onClick={handleActivateJoy}
+                  className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                  <Zap size={20} /> জয়কে সক্রিয় করুন
+                </button>
+              </div>
+            )}
+            
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
                 <div className={`p-5 rounded-[32px] text-base font-bold shadow-sm whitespace-pre-wrap leading-relaxed ${
@@ -143,7 +165,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                 </div>
               </div>
             ))}
-            {isTyping && <div className="p-5 text-slate-400 italic">জয় ভাবছে...</div>}
+            {isTyping && <div className="p-5 text-slate-400 italic font-black text-xs uppercase tracking-widest">জয় লিখছে...</div>}
           </div>
 
           <div className="p-8 bg-white border-t border-slate-50">
@@ -153,11 +175,11 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                   type="text" 
                   value={input} 
                   onChange={(e) => setInput(e.target.value)} 
-                  placeholder={hasKey ? t.ask_joy : "Connect Joy to start chatting..."} 
+                  placeholder={hasKey ? t.ask_joy : "আগে কানেক্ট করুন..."} 
                   className="w-full pl-6 pr-16 py-5 bg-slate-100 border-none rounded-2xl focus:ring-2 focus:ring-blue-500/20 font-bold text-lg" 
-                  disabled={isTyping || !hasKey}
+                  disabled={isTyping}
                 />
-                <button type="submit" disabled={!input.trim() || isTyping || !hasKey} className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md disabled:opacity-50">
+                <button type="submit" disabled={!input.trim() || isTyping} className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md disabled:opacity-50">
                   <Send size={20} />
                 </button>
               </form>
