@@ -9,60 +9,77 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       :root {
-        --theme-primary: #6366f1;
-        --theme-bg: #f8fafc;
-        --card-bg: rgba(255, 255, 255, 0.85);
+        --theme-primary: #4f46e5;
+        --theme-bg: #fdfdff;
+        --card-bg: #ffffff;
         --text-main: #0f172a;
+        --border-color: #f1f5f9;
       }
       
       .dark-mode {
         --theme-bg: #020617;
-        --card-bg: rgba(15, 23, 42, 0.8);
+        --card-bg: #0f172a;
         --text-main: #f8fafc;
+        --border-color: #1e293b;
       }
 
       body {
         font-family: 'Plus Jakarta Sans', sans-serif;
         background-color: var(--theme-bg);
         color: var(--text-main);
-        transition: background-color 0.5s ease;
         overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
       }
 
-      .mesh-bg {
+      .bg-gradient-mesh {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
         z-index: -1;
-        opacity: 0.5;
-        background: 
-          radial-gradient(at 0% 0%, hsla(231,100%,77%,0.3) 0, transparent 50%), 
-          radial-gradient(at 50% 0%, hsla(331,100%,77%,0.3) 0, transparent 50%), 
-          radial-gradient(at 100% 0%, hsla(191,100%,77%,0.3) 0, transparent 50%);
+        background: radial-gradient(circle at 0% 0%, #eef2ff 0%, transparent 50%),
+                    radial-gradient(circle at 100% 100%, #fdf2f8 0%, transparent 50%);
+      }
+      
+      .dark-mode .bg-gradient-mesh {
+        background: radial-gradient(circle at 0% 0%, #1e1b4b 0%, transparent 50%),
+                    radial-gradient(circle at 100% 100%, #1e1b4b 0%, transparent 50%);
       }
 
-      .glass-card {
+      .premium-card {
         background: var(--card-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+        border-radius: 24px;
+      }
+
+      .sidebar-item-active {
+        background: var(--theme-primary);
+        color: white !important;
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
       }
 
       .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-      .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
       .dark-mode .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
 
-      .btn-press { transition: transform 0.1s ease; }
-      .btn-press:active { transform: scale(0.95); }
-
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+      input, select, textarea {
+        background-color: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
       }
-      .animate-fade { animation: fadeIn 0.4s ease forwards; }
+      .dark-mode input, .dark-mode select, .dark-mode textarea {
+        background-color: #1e293b !important;
+        border: 1px solid #334155 !important;
+        color: white;
+      }
+      
+      button {
+        transition: all 0.2s ease;
+      }
+      button:active {
+        transform: scale(0.96);
+      }
     </style>
     <script type="importmap">
     {
@@ -74,7 +91,6 @@
         "recharts": "https://esm.sh/recharts@^3.7.0",
         "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
         "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.45.0",
-        "framer-motion": "https://esm.sh/framer-motion@^11.11.11",
         "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
         "react/": "https://esm.sh/react@^19.2.4/"
       }
@@ -82,7 +98,7 @@
     </script>
   </head>
   <body>
-    <div class="mesh-bg"></div>
+    <div class="bg-gradient-mesh"></div>
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>
   </body>
