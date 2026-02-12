@@ -7,25 +7,11 @@ const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
 
 /**
- * Checks if the API key is currently available in the environment.
- */
-export const isApiKeyAvailable = () => {
-  const key = process.env.API_KEY;
-  return !!key && key !== "undefined" && key.length > 5;
-};
-
-/**
- * Dynamic chat stream with Joy. 
- * Creates a fresh instance on every call to ensure current context and key usage.
+ * Main chat stream logic with Joy.
+ * Relies exclusively on process.env.API_KEY as per system requirements.
  */
 export async function* chatWithJoyStream(userMessage: string, userData: any) {
-  const apiKey = process.env.API_KEY;
-  
-  if (!apiKey || apiKey === "undefined") {
-    throw new Error("KEY_MISSING");
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   try {
     const responseStream = await ai.models.generateContentStream({
@@ -48,30 +34,23 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
       }
     }
   } catch (error: any) {
-    console.error("Gemini Connection Error:", error);
-    // Handle transient key errors gracefully
-    if (error.message?.includes("entity was not found") || error.message?.includes("API_KEY_INVALID")) {
-      throw new Error("KEY_INVALID");
-    }
-    throw error;
+    console.error("Joy Error:", error);
+    yield "দুঃখিত বন্ধু, আমি এই মুহূর্তে উত্তর দিতে পারছি না। দয়া করে কিছুক্ষণ পর আবার চেষ্টা করুন।";
   }
 }
 
 /**
- * Text-to-speech for Joy's voice output.
+ * Text-to-speech logic for Joy.
  */
 export async function speakText(text: string): Promise<string | null> {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey || apiKey === "undefined") return null;
-
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   try {
     const response = await ai.models.generateContent({
       model: VOICE_MODEL,
       contents: [{ parts: [{ text }] }],
       config: {
-        responseModalities: [Modality.AUDIO],
+        responseModalalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
             prebuiltVoiceConfig: { voiceName: 'Kore' },
@@ -82,7 +61,7 @@ export async function speakText(text: string): Promise<string | null> {
 
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
   } catch (error) {
-    console.error("Joy Voice Error:", error);
+    console.error("Joy Voice Sync Error:", error);
     return null;
   }
 }
