@@ -330,38 +330,46 @@ const App: React.FC = () => {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 h-screen overflow-y-auto flex flex-col relative custom-scrollbar">
-        <header className="sticky top-0 z-30 h-24 glass-card border-b px-8 flex items-center justify-between bg-white/80 backdrop-blur-sm">
-          <div className="flex items-center gap-4 flex-1">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden p-2 text-indigo-600"><Menu size={24}/></button>
-            <div className="hidden md:flex items-center gap-2 bg-slate-100/50 px-4 py-2 rounded-2xl border border-slate-100">
-               <Search size={16} className="text-slate-400" />
-               <input type="text" placeholder={lang === 'bn' ? "খুঁজুন..." : "Search..."} className="bg-transparent border-none outline-none text-xs font-bold w-40 text-slate-800" />
-               <Command size={14} className="text-slate-300" />
+        <header className="sticky top-0 z-30 h-24 glass-card border-b px-4 sm:px-8 flex items-center justify-between bg-white/80 backdrop-blur-sm">
+          <div className="flex items-center gap-2 sm:gap-4 flex-1">
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"><Menu size={24}/></button>
+            
+            {/* Search Bar - Responsive for Mobile */}
+            <div className="flex items-center gap-2 bg-slate-100/50 px-3 sm:px-4 py-2 rounded-2xl border border-slate-100 flex-1 max-w-[140px] sm:max-w-[240px] md:max-w-[300px]">
+               <Search size={16} className="text-slate-400 shrink-0" />
+               <input 
+                 type="text" 
+                 placeholder={lang === 'bn' ? "খুঁজুন..." : "Search..."} 
+                 className="bg-transparent border-none outline-none text-[10px] sm:text-xs font-bold w-full text-slate-800 placeholder:text-slate-400" 
+               />
+               <div className="hidden sm:block">
+                 <Command size={14} className="text-slate-300" />
+               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button onClick={toggleDarkMode} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl hover:scale-110 transition-all text-indigo-600">
-               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          <div className="flex items-center gap-2 sm:gap-4 ml-2">
+            <button onClick={toggleDarkMode} className="p-2.5 sm:p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl hover:scale-110 transition-all text-indigo-600">
+               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <button onClick={handleLangToggle} className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 text-slate-800">
                {lang === 'bn' ? 'English' : 'বাংলা'}
             </button>
-            <div className="flex items-center gap-3 pl-4 border-l border-slate-100">
+            <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-slate-100">
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-black text-slate-900 leading-none">{userName}</p>
                 <p className={`text-[9px] font-bold uppercase tracking-widest ${isGuest ? 'text-amber-500' : 'text-emerald-500'}`}>
                   {isGuest ? 'Guest Mode' : 'Active Now'}
                 </p>
               </div>
-              <div className={`w-10 h-10 ${isGuest ? 'bg-amber-500' : 'bg-indigo-600'} rounded-xl flex items-center justify-center text-white font-black uppercase shadow-lg`}>
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 ${isGuest ? 'bg-amber-500' : 'bg-indigo-600'} rounded-xl flex items-center justify-center text-white font-black uppercase shadow-lg text-sm`}>
                 {userName.charAt(0)}
               </div>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 p-8">
+        <div className="flex-1 p-4 sm:p-8">
           {renderContent()}
         </div>
 
