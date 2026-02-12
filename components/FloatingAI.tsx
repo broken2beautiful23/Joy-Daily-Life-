@@ -115,11 +115,11 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     setInput('');
     setIsTyping(true);
     
-    // এআই-এর জন্য প্রিপারেশন মেসেজ
+    // এআই-এর জন্য নতুন মেসেজ বাবল তৈরি
     setMessages(prev => [...prev, { role: 'joy', text: '' }]);
     
     let fullResponseText = '';
-    let hasSuccessfullyStreamed = false;
+    let hasData = false;
 
     try {
       const stream = chatWithJoyStream(userMsg, { userName });
@@ -132,27 +132,28 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
           }
           return updated;
         });
-        hasSuccessfullyStreamed = true;
+        hasData = true;
       }
       
-      if (!hasSuccessfullyStreamed) throw new Error("Connection Timeout");
-
+      if (!hasData) {
+        throw new Error("No data received");
+      }
     } catch (err) {
-      console.error("Joy Response Error:", err);
+      console.error("Assistant Connection Error:", err);
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = { 
           role: 'joy', 
           text: lang === 'bn' 
-            ? "দুঃখিত বন্ধু, ইন্টারনেটে সমস্যার কারণে আপনার সাথে সংযোগ করতে পারছি না। দয়া করে আবার চেষ্টা করুন।" 
-            : "Sorry friend, connection failed due to network issues. Please try again.",
+            ? "দুঃখিত বন্ধু, এআই সার্ভারের সাথে সংযোগ করা যাচ্ছে না। দয়া করে আপনার ইন্টারনেট চেক করে আবার চেষ্টা করো।" 
+            : "Sorry friend, could not connect to AI server. Please check your internet and try again.",
           isError: true
         };
         return updated;
       });
     } finally {
       setIsTyping(false);
-      if (isVoiceEnabled && fullResponseText && hasSuccessfullyStreamed) {
+      if (isVoiceEnabled && fullResponseText && hasData) {
         playAudioResponse(fullResponseText);
       }
     }
