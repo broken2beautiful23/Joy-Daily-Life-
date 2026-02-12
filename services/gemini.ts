@@ -1,29 +1,30 @@
 
 import { GoogleGenAI, Modality } from "@google/genai";
 
-/**
- * জয় (Joy) এর জন্য সিস্টেম ইনস্ট্রাকশন। 
- */
 const JOY_SYSTEM_PROMPT = "আপনার নাম জয়। আপনি একজন বন্ধুসুলভ পার্সোনাল লাইফ কোচ। সবসময় মিষ্টিভাবে বাংলায় কথা বলুন। ব্যবহারকারীর প্রতিটি কথার সুন্দর এবং অনুপ্রেরণামূলক উত্তর দিন। আপনার মূল লক্ষ্য ব্যবহারকারীকে মোটিভেট করা এবং তার কাজে সাহায্য করা। আপনার উত্তর ছোট এবং আকর্ষণীয় রাখুন।";
 
 const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
 
 /**
- * চ্যাট করার জন্য জেনারেটর ফাংশন।
- * @google/genai এর স্ট্যান্ডার্ড গাইডলাইন মেনে তৈরি।
+ * Checks if the API key is available in the environment.
+ */
+export const isApiKeyAvailable = () => {
+  const key = process.env.API_KEY;
+  return !!key && key !== "undefined";
+};
+
+/**
+ * Chat stream generator.
  */
 export async function* chatWithJoyStream(userMessage: string, userData: any) {
-  // এপিআই কী সরাসরি চেক করা হচ্ছে প্রতি কলের সময়
   const apiKey = process.env.API_KEY;
   
   if (!apiKey || apiKey === "undefined") {
-    console.error("Joy AI: API Key is missing. Check environment variables.");
-    yield "দুঃখিত বন্ধু, আমার সিস্টেমে সামান্য টেকনিক্যাল সমস্যা হচ্ছে। দয়া করে আপনার ইন্টারনেট চেক করুন অথবা কিছুক্ষণ পর আবার চেষ্টা করুন।";
-    return;
+    throw new Error("KEY_MISSING");
   }
 
-  // নতুন ইন্সট্যান্স তৈরি
+  // Create instance right before use to ensure latest key from dialog is used
   const ai = new GoogleGenAI({ apiKey });
   
   try {
@@ -37,30 +38,23 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
       }],
       config: {
         systemInstruction: JOY_SYSTEM_PROMPT,
-        temperature: 0.85,
-        topP: 0.9,
+        temperature: 0.8,
       },
     });
 
-    let receivedAnyData = false;
     for await (const chunk of responseStream) {
       if (chunk.text) {
-        receivedAnyData = true;
         yield chunk.text;
       }
     }
-
-    if (!receivedAnyData) {
-      yield "দুঃখিত বন্ধু, আমি এই মুহূর্তে উত্তর তৈরি করতে পারছি না। দয়া করে আবার মেসেজ দিন।";
-    }
   } catch (error: any) {
-    console.error("Gemini connection error:", error);
-    yield "দুঃখিত বন্ধু, সংযোগ বিচ্ছিন্ন হয়েছে। দয়া করে আবার চেষ্টা করুন।";
+    console.error("Gemini stream error:", error);
+    throw error;
   }
 }
 
 /**
- * টেক্সট থেকে কথা বলা (TTS) এর ফাংশন।
+ * Text-to-speech function.
  */
 export async function speakText(text: string): Promise<string | null> {
   const apiKey = process.env.API_KEY;

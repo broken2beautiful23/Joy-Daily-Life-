@@ -2,9 +2,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, X, Sparkles, 
-  Minimize2, Volume2, VolumeX, Mic, MicOff, RotateCcw
+  Minimize2, Volume2, VolumeX, Mic, MicOff, RotateCcw, Link
 } from 'lucide-react';
-import { chatWithJoyStream, speakText } from '../services/gemini';
+import { chatWithJoyStream, speakText, isApiKeyAvailable } from '../services/gemini';
 import { translations, Language } from '../translations';
 import { AI_AVATAR_URL } from '../constants';
 
@@ -20,11 +20,25 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [isListening, setIsListening] = useState(false);
+  const [hasKey, setHasKey] = useState(isApiKeyAvailable());
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const recognitionRef = useRef<any>(null);
   const t = translations[lang];
+
+  // Global AI Studio Helpers
+  const aiStudio = (window as any).aistudio;
+
+  useEffect(() => {
+    const checkKey = async () => {
+      if (aiStudio) {
+        const selected = await aiStudio.hasSelectedApiKey();
+        if (selected || isApiKeyAvailable()) setHasKey(true);
+      }
+    };
+    checkKey();
+  }, [isOpen]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -44,39 +58,71 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     }
   }, [isOpen, userName, lang]);
 
-  useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = lang === 'bn' ? 'bn-BD' : 'en-US';
-
-      recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInput(transcript);
-        setIsListening(false);
-      };
-      recognitionRef.current.onerror = () => setIsListening(false);
-      recognitionRef.current.onend = () => setIsListening(false);
+  const handleConnect = async () => {
+    if (aiStudio) {
+      await aiStudio.openSelectKey();
+      setHasKey(true); // Proceed assuming success per instructions
     }
-  }, [lang]);
+  };
 
-  const toggleListening = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-    } else {
-      try {
-        recognitionRef.current?.start();
-        setIsListening(true);
-      } catch (e) {
-        console.error("Mic error:", e);
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const userMsg = input.trim();
+    if (!userMsg || isTyping) return;
+
+    if (!hasKey) {
+      setMessages(prev => [...prev, { 
+        role: 'joy', 
+        text: lang === 'bn' ? "জয়কে সক্রিয় করতে দয়া করে উপরের 'Connect' বাটনে ক্লিক করুন।" : "Please click 'Connect' button above to activate Joy.",
+        isError: true 
+      }]);
+      return;
+    }
+
+    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setInput('');
+    setIsTyping(true);
+    setMessages(prev => [...prev, { role: 'joy', text: '' }]);
+    
+    let currentText = '';
+    let success = false;
+
+    try {
+      const stream = chatWithJoyStream(userMsg, { userName });
+      for await (const chunk of stream) {
+        currentText += chunk;
+        setMessages(prev => {
+          const updated = [...prev];
+          if (updated.length > 0) {
+            updated[updated.length - 1] = { role: 'joy', text: currentText };
+          }
+          return updated;
+        });
+        success = true;
+      }
+    } catch (err: any) {
+      if (err.message === "KEY_MISSING") {
+        setHasKey(false);
+      }
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { 
+          role: 'joy', 
+          text: lang === 'bn' ? "সংযোগ বিচ্ছিন্ন হয়েছে। দয়া করে আবার চেষ্টা করুন।" : "Connection failed. Please try again.",
+          isError: true
+        };
+        return updated;
+      });
+    } finally {
+      setIsTyping(false);
+      if (isVoiceEnabled && currentText && success) {
+        playAudioResponse(currentText);
       }
     }
   };
 
   const playAudioResponse = async (text: string) => {
-    if (!isVoiceEnabled || !text || text.length < 2) return;
+    if (!isVoiceEnabled || !text) return;
     try {
       const base64Audio = await speakText(text);
       if (base64Audio) {
@@ -101,59 +147,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         source.connect(ctx.destination);
         source.start();
       }
-    } catch (err) {
-      console.error("Audio error:", err);
-    }
-  };
-
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const userMsg = input.trim();
-    if (!userMsg || isTyping) return;
-
-    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
-    setInput('');
-    setIsTyping(true);
-    
-    // এআই-এর উত্তরের জন্য বাবল তৈরি
-    setMessages(prev => [...prev, { role: 'joy', text: '' }]);
-    
-    let currentText = '';
-    let hasStreamed = false;
-
-    try {
-      const stream = chatWithJoyStream(userMsg, { userName });
-      for await (const chunk of stream) {
-        currentText += chunk;
-        setMessages(prev => {
-          const updated = [...prev];
-          if (updated.length > 0) {
-            updated[updated.length - 1] = { role: 'joy', text: currentText };
-          }
-          return updated;
-        });
-        hasStreamed = true;
-      }
-      
-      if (!hasStreamed) throw new Error("No output");
-
-    } catch (err) {
-      console.error("Joy response error:", err);
-      setMessages(prev => {
-        const updated = [...prev];
-        updated[updated.length - 1] = { 
-          role: 'joy', 
-          text: lang === 'bn' ? "দুঃখিত বন্ধু, এই মুহূর্তে আমার সার্ভারে সমস্যা হচ্ছে। দয়া করে আবার মেসেজ দিন।" : "Sorry friend, I am having some trouble right now. Please try again.",
-          isError: true
-        };
-        return updated;
-      });
-    } finally {
-      setIsTyping(false);
-      if (isVoiceEnabled && currentText && hasStreamed) {
-        playAudioResponse(currentText);
-      }
-    }
+    } catch (err) { console.error(err); }
   };
 
   return (
@@ -171,6 +165,11 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
               </div>
             </div>
             <div className="flex gap-1">
+              {!hasKey && (
+                <button onClick={handleConnect} className="flex items-center gap-2 bg-yellow-400 text-blue-900 px-3 py-1.5 rounded-xl font-black text-[10px] uppercase hover:bg-white transition-all mr-2">
+                  <Link size={12} /> Connect
+                </button>
+              )}
               <button onClick={() => setIsVoiceEnabled(!isVoiceEnabled)} className={`p-2 rounded-xl transition-all ${isVoiceEnabled ? 'bg-white/20' : 'opacity-40'}`}>
                 {isVoiceEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
               </button>
@@ -212,7 +211,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
           <div className="p-6 bg-white border-t border-slate-50">
             <div className="flex gap-3">
-              <button onClick={toggleListening} className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${isListening ? 'bg-rose-500 text-white shadow-lg animate-pulse' : 'bg-slate-100 text-slate-500'}`}>
+              <button onClick={() => isListening ? recognitionRef.current?.stop() : recognitionRef.current?.start()} className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${isListening ? 'bg-rose-500 text-white shadow-lg animate-pulse' : 'bg-slate-100 text-slate-500'}`}>
                 {isListening ? <MicOff size={24} /> : <Mic size={24} />}
               </button>
               <form onSubmit={handleSendMessage} className="relative flex-1">
@@ -220,13 +219,13 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                   type="text" 
                   value={input} 
                   onChange={(e) => setInput(e.target.value)} 
-                  placeholder={t.ask_joy} 
+                  placeholder={hasKey ? t.ask_joy : (lang === 'bn' ? "আগে জয়কে কানেক্ট করুন..." : "Connect Joy first...")} 
                   className="w-full pl-6 pr-14 py-4 bg-slate-100 rounded-[20px] font-bold outline-none border-2 border-transparent focus:border-blue-500/10 focus:bg-white transition-all shadow-inner" 
-                  disabled={isTyping}
+                  disabled={isTyping || !hasKey}
                 />
                 <button 
                   type="submit" 
-                  disabled={!input.trim() || isTyping} 
+                  disabled={!input.trim() || isTyping || !hasKey} 
                   className="absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-11 bg-orange-400 text-white rounded-xl flex items-center justify-center disabled:opacity-50 hover:bg-orange-500 transition-colors shadow-sm"
                 >
                   <Send size={20} />
@@ -245,16 +244,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         ) : (
           <div className="relative w-20 h-24 flex items-center justify-center transition-transform hover:scale-110 active:scale-95">
             <div className="absolute bottom-10 animate-balloon">
-              <div className="absolute -left-6 bottom-4 w-8 h-10 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-full shadow-lg border border-white/20">
-                <div className="absolute bottom-[-15px] left-1/2 -translate-x-1/2 w-[1px] h-12 bg-slate-400/30"></div>
-                <div className="absolute top-1 left-2 w-2 h-2 bg-white/40 rounded-full blur-[1px]"></div>
-              </div>
-              <div className="absolute left-0 bottom-8 w-10 h-12 bg-gradient-to-tr from-violet-600 to-violet-400 rounded-full shadow-xl border border-white/30 flex items-center justify-center">
-                <div className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 w-[1px] h-16 bg-slate-400/30"></div>
-                <Sparkles size={14} className="text-white animate-pulse" />
-              </div>
-              <div className="absolute -right-6 bottom-4 w-8 h-10 bg-gradient-to-tr from-orange-500 to-amber-400 rounded-full shadow-lg border border-white/20">
-                <div className="absolute bottom-[-15px] left-1/2 -translate-x-1/2 w-[1px] h-12 bg-slate-400/30"></div>
+              <div className="absolute left-0 bottom-8 w-12 h-14 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-full shadow-xl border border-white/30 flex items-center justify-center">
+                <Sparkles size={16} className="text-white animate-pulse" />
               </div>
             </div>
           </div>
