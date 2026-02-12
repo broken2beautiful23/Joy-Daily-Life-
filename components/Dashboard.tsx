@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   Rocket,
   ArrowUpRight,
-  Clock as ClockIcon
+  Clock as ClockIcon,
+  Sparkles
 } from 'lucide-react';
 import { translations, Language } from '../translations';
 import { Transaction } from '../types';
@@ -130,6 +131,33 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId }) => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20 relative">
+      {/* MAIN BANNER HEADING */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-800 rounded-[48px] p-8 md:p-14 text-white shadow-2xl shadow-blue-500/20 mb-12">
+        <div className="absolute top-0 right-0 p-12 opacity-10 rotate-12 pointer-events-none scale-150">
+          <Sparkles size={160} />
+        </div>
+        <div className="relative z-10 max-w-3xl">
+          <div className="flex items-center gap-3 mb-6 animate-bounce">
+            <span className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20">
+              {lang === 'bn' ? 'আজকের টিপস' : 'Daily Tips'}
+            </span>
+          </div>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-tight mb-6">
+            {lang === 'bn' 
+              ? 'প্রতিদিনের জীবনকে সহজ করার টিপস ও ট্রিক্স' 
+              : 'Tips and Tricks to Make Daily Life Easier'}
+          </h1>
+          <p className="text-lg md:text-xl font-bold opacity-80 leading-relaxed max-w-2xl">
+            {lang === 'bn'
+              ? 'আপনার দৈনন্দিন জীবনকে আরও প্রোডাক্টিভ এবং আনন্দময় করে তুলতে জয়লাইফ ওএস-এর স্মার্ট ফিচারগুলো ব্যবহার করুন।'
+              : 'Make your daily life more productive and joyful using JoyLife OS smart features.'}
+          </p>
+        </div>
+        {/* Abstract decorative elements */}
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 right-1/4 w-20 h-20 bg-blue-400/20 rounded-full blur-2xl animate-pulse"></div>
+      </div>
+
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex-1">
           <h2 className="text-3xl font-black text-slate-800 tracking-tight">{greeting}, {userName}! 👋</h2>

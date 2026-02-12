@@ -29,7 +29,7 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [lang, setLang] = useState<Language>('bn');
-  const [theme, setTheme] = useState<AppTheme>('blue');
+  const [theme] = useState<AppTheme>('blue'); // Locked to blue theme
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   
@@ -72,13 +72,10 @@ const App: React.FC = () => {
     });
 
     const savedLang = localStorage.getItem('joylife_lang') as Language;
-    const savedTheme = localStorage.getItem('joylife_theme') as AppTheme;
-    
     if (savedLang) setLang(savedLang);
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.body.className = savedTheme;
-    }
+    
+    // Set default theme class
+    document.body.className = 'blue';
 
     // Close search dropdown when clicking outside
     const handleClickOutside = (event: MouseEvent) => {
@@ -93,12 +90,6 @@ const App: React.FC = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  const changeTheme = (newTheme: AppTheme) => {
-    setTheme(newTheme);
-    localStorage.setItem('joylife_theme', newTheme);
-    document.body.className = newTheme;
-  };
 
   const handleLangToggle = () => {
     const newLang = lang === 'bn' ? 'en' : 'bn';
@@ -211,15 +202,15 @@ const App: React.FC = () => {
 
   if (!isAuthenticated || !userId) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' || theme === 'naruto' ? 'bg-slate-950' : theme === 'motivational' ? 'bg-[#fffcf0]' : 'bg-blue-50'} p-4 font-sans`}>
+      <div className={`min-h-screen flex items-center justify-center bg-blue-50 p-4 font-sans`}>
         <div className="bg-white/90 backdrop-blur-3xl rounded-[48px] shadow-2xl p-10 w-full max-w-lg animate-in fade-in zoom-in duration-500 border border-white/50 relative z-10">
           
           <div className="flex justify-between items-center mb-10">
              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg ${theme === 'motivational' ? 'bg-amber-500' : 'bg-blue-600'}`}>
-                  {theme === 'motivational' ? <Sun size={20} /> : <Sparkles size={20} />}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg bg-blue-600`}>
+                  <Sparkles size={20} />
                 </div>
-                <span className={`text-xs font-black uppercase tracking-widest ${theme === 'motivational' ? 'text-amber-600' : 'text-blue-600'}`}>Joy Daily Life</span>
+                <span className={`text-xs font-black uppercase tracking-widest text-blue-600`}>Joy Daily Life</span>
              </div>
              <button onClick={handleLangToggle} className="text-[10px] font-black text-slate-400 bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm">
                {lang === 'bn' ? 'English' : 'বাংলা'}
@@ -241,7 +232,7 @@ const App: React.FC = () => {
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email Address</label>
                   <div className="relative group">
-                    <Mail size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:${theme === 'motivational' ? 'text-amber-500' : 'text-blue-500'}`} />
+                    <Mail size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500`} />
                     <input
                       type="email"
                       value={email}
@@ -256,7 +247,7 @@ const App: React.FC = () => {
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Password</label>
                   <div className="relative group">
-                    <Lock size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:${theme === 'motivational' ? 'text-amber-500' : 'text-blue-500'}`} />
+                    <Lock size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500`} />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
@@ -279,7 +270,7 @@ const App: React.FC = () => {
                   <div className="space-y-1 animate-in slide-in-from-top-2 duration-300">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Confirm Password</label>
                     <div className="relative group">
-                      <ShieldCheck size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:${theme === 'motivational' ? 'text-amber-500' : 'text-blue-500'}`} />
+                      <ShieldCheck size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500`} />
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={confirmPassword}
@@ -311,7 +302,7 @@ const App: React.FC = () => {
                   <button 
                     type="button"
                     onClick={() => { setIsSignUp(!isSignUp); setAuthStage('credentials'); }}
-                    className={`text-xs font-black uppercase tracking-widest hover:underline underline-offset-4 ${theme === 'motivational' ? 'text-amber-600' : 'text-blue-600'}`}
+                    className={`text-xs font-black uppercase tracking-widest hover:underline underline-offset-4 text-blue-600`}
                   >
                     {isSignUp ? (lang === 'bn' ? 'আগে থেকেই অ্যাকাউন্ট আছে? লগইন করুন' : 'Already have an account? Login') : (lang === 'bn' ? 'অ্যাকাউন্ট নেই? সাইন আপ করুন' : 'Don\'t have an account? Sign Up')}
                   </button>
@@ -320,13 +311,13 @@ const App: React.FC = () => {
             </>
           ) : (
             <div className="text-center animate-in slide-in-from-right duration-500">
-              <div className={`w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner ${theme === 'motivational' ? 'bg-amber-50 text-amber-600' : ''}`}>
+              <div className={`w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner`}>
                 <Mail size={40} />
               </div>
               <h1 className="text-3xl font-black mb-2 text-slate-900 tracking-tight">{t.verify_email}</h1>
               <p className="text-slate-400 mb-8 font-bold text-xs uppercase tracking-widest leading-relaxed">
                 {lang === 'bn' ? 'আমরা আপনার ইমেলে একটি কোড পাঠিয়েছি:' : 'We sent a code to:'}<br/>
-                <span className={`lowercase ${theme === 'motivational' ? 'text-amber-600' : 'text-blue-600'}`}>{email}</span>
+                <span className={`lowercase text-blue-600`}>{email}</span>
               </p>
               
               <div className="flex justify-center gap-2 mb-10">
@@ -351,7 +342,7 @@ const App: React.FC = () => {
                       }
                     }}
                     className="w-12 h-14 text-center text-2xl font-black bg-white border border-slate-200 rounded-xl focus:ring-4 outline-none transition-all"
-                    style={{ focusRingColor: theme === 'motivational' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(59, 130, 246, 0.2)' } as any}
+                    style={{ focusRingColor: 'rgba(59, 130, 246, 0.2)' } as any}
                   />
                 ))}
               </div>
@@ -365,7 +356,7 @@ const App: React.FC = () => {
                   {isAuthLoading ? <Loader2 className="animate-spin" size={24} /> : t.verify_reg}
                 </button>
                 <div className="flex flex-col gap-2 pt-4">
-                  <button onClick={handleAuth} className={`text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 ${theme === 'motivational' ? 'text-amber-500' : 'text-blue-500'}`}>
+                  <button onClick={handleAuth} className={`text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 text-blue-500`}>
                     <RefreshCw size={12}/> {t.resend_code}
                   </button>
                   <button onClick={() => { setAuthStage('credentials'); setIsSignUp(false); }} className="text-[10px] text-slate-400 font-black uppercase tracking-widest hover:text-slate-600">{t.cancel}</button>
@@ -379,23 +370,23 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen transition-all duration-700 ${theme === 'dark' || theme === 'naruto' ? 'bg-slate-950 text-slate-100' : theme === 'motivational' ? 'bg-[#fffcf0] text-[#451a03]' : 'bg-blue-50/30 text-slate-900'} flex font-sans`}>
-      <aside className={`fixed lg:static inset-y-0 left-0 z-40 w-72 transform transition-all duration-500 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${theme === 'dark' || theme === 'naruto' ? 'bg-slate-900 border-slate-800' : theme === 'motivational' ? 'bg-white/80 border-amber-50 backdrop-blur-xl shadow-2xl' : 'bg-white/80 border-blue-50 backdrop-blur-xl'} border-r`}>
+    <div className={`min-h-screen transition-all duration-700 bg-blue-50/30 text-slate-900 flex font-sans`}>
+      <aside className={`fixed lg:static inset-y-0 left-0 z-40 w-72 transform transition-all duration-500 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} bg-white/80 border-blue-50 backdrop-blur-xl border-r`}>
         <div className="h-full flex flex-col p-8">
           <div className="flex items-center gap-4 mb-12">
-            <div className={`p-3 rounded-2xl text-white shadow-xl rotate-3 transition-all ${theme === 'naruto' ? 'bg-orange-600' : theme === 'motivational' ? 'bg-amber-500' : 'bg-blue-600'}`}>
-              {theme === 'motivational' ? <Sun size={28} /> : theme === 'naruto' ? <Flame size={28} /> : <Sparkles size={28}/>}
+            <div className={`p-3 rounded-2xl text-white shadow-xl rotate-3 transition-all bg-blue-600`}>
+              <Sparkles size={28}/>
             </div>
             <div>
-              <h1 className={`text-2xl font-black leading-none tracking-tight transition-colors ${theme === 'dark' || theme === 'naruto' ? 'text-white' : 'text-slate-900'}`}>{t.app_name}</h1>
-              <p className={`text-[10px] font-black uppercase tracking-[0.2em] mt-2 transition-colors ${theme === 'naruto' ? 'text-orange-500' : theme === 'motivational' ? 'text-amber-600' : 'text-blue-500/60'}`}>{t.personal_os}</p>
+              <h1 className={`text-2xl font-black leading-none tracking-tight transition-colors text-slate-900`}>{t.app_name}</h1>
+              <p className={`text-[10px] font-black uppercase tracking-[0.2em] mt-2 transition-colors text-blue-500/60`}>{t.personal_os}</p>
             </div>
           </div>
           
           <nav className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
             {NAVIGATION_ITEMS.map((item) => (
               <button key={item.id} onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
-                className={`w-full flex items-center gap-4 px-6 py-4 rounded-[20px] transition-all duration-300 ${activeTab === item.id ? `blue-btn text-white font-black shadow-xl` : `${theme === 'motivational' ? 'text-amber-900/40 hover:text-amber-600 hover:bg-amber-50' : theme === 'naruto' ? 'text-orange-200/40 hover:text-orange-500 hover:bg-orange-500/5' : 'text-slate-400 hover:bg-blue-50 hover:text-blue-600'} font-bold`}`}>
+                className={`w-full flex items-center gap-4 px-6 py-4 rounded-[20px] transition-all duration-300 ${activeTab === item.id ? `blue-btn text-white font-black shadow-xl` : `text-slate-400 hover:bg-blue-50 hover:text-blue-600 font-bold`}`}>
                 <span>{item.icon}</span>
                 <span className="text-sm tracking-tight">{lang === 'bn' ? item.label : item.id.toUpperCase()}</span>
               </button>
@@ -411,9 +402,9 @@ const App: React.FC = () => {
       </aside>
 
       <main className="flex-1 h-screen overflow-y-auto flex flex-col relative custom-scrollbar">
-        <header className={`sticky top-0 z-30 w-full h-24 backdrop-blur-2xl border-b px-8 lg:px-12 flex items-center justify-between transition-all ${theme === 'dark' || theme === 'naruto' ? 'bg-slate-950/80 border-slate-800' : theme === 'motivational' ? 'bg-white/60 border-amber-50' : 'bg-white/60 border-blue-50'}`}>
+        <header className={`sticky top-0 z-30 w-full h-24 backdrop-blur-2xl border-b px-8 lg:px-12 flex items-center justify-between transition-all bg-white/60 border-blue-50`}>
           <div className="flex items-center gap-6 flex-1">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`p-3 lg:hidden rounded-2xl transition-all ${theme === 'naruto' ? 'text-orange-500 hover:bg-orange-500/10' : theme === 'motivational' ? 'text-amber-600 hover:bg-amber-50' : 'text-blue-600 hover:bg-blue-50'}`}>
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`p-3 lg:hidden rounded-2xl transition-all text-blue-600 hover:bg-blue-50`}>
               {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             
@@ -480,34 +471,16 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
-             <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-100 shadow-sm">
-                {(['blue', 'rose', 'emerald', 'dark', 'naruto', 'motivational'] as AppTheme[]).map(th => (
-                  <button 
-                    key={th} 
-                    onClick={() => changeTheme(th)} 
-                    title={t[`theme_${th}` as keyof typeof t] as string}
-                    className={`w-6 h-6 rounded-lg transition-all ${
-                      th === 'blue' ? 'bg-blue-500' : 
-                      th === 'rose' ? 'bg-rose-500' : 
-                      th === 'emerald' ? 'bg-emerald-500' : 
-                      th === 'dark' ? 'bg-slate-800' : 
-                      th === 'naruto' ? 'bg-orange-600' :
-                      'bg-amber-400'
-                    } ${theme === th ? 'ring-2 ring-offset-2 ring-indigo-400 scale-110' : 'opacity-40 hover:opacity-100'}`} 
-                  />
-                ))}
-             </div>
-            
-            <button onClick={handleLangToggle} className={`flex items-center gap-3 px-6 py-3 rounded-2xl text-xs font-black border transition-all ${theme === 'motivational' ? 'bg-amber-50 border-amber-100 text-amber-600' : 'bg-blue-50 border-blue-100 text-blue-600'}`}>
+            <button onClick={handleLangToggle} className={`flex items-center gap-3 px-6 py-3 rounded-2xl text-xs font-black border transition-all bg-blue-50 border-blue-100 text-blue-600`}>
               <User size={16} /> <span>{lang === 'bn' ? 'EN' : 'BN'}</span>
             </button>
 
-            <div className={`hidden sm:flex items-center gap-4 pl-4 border-l transition-all ${theme === 'dark' || theme === 'naruto' ? 'border-slate-800' : theme === 'motivational' ? 'border-amber-50' : 'border-blue-50'}`}>
+            <div className={`hidden sm:flex items-center gap-4 pl-4 border-l transition-all border-blue-50`}>
               <div className="hidden md:block text-right">
-                <p className={`text-sm font-black transition-colors ${theme === 'dark' || theme === 'naruto' ? 'text-white' : 'text-slate-900'}`}>{userName}</p>
-                <p className={`text-[10px] font-black uppercase transition-colors ${theme === 'naruto' ? 'text-orange-500/50' : theme === 'motivational' ? 'text-amber-500/50' : 'text-blue-500/50'}`}>Active Now</p>
+                <p className={`text-sm font-black transition-colors text-slate-900`}>{userName}</p>
+                <p className={`text-[10px] font-black uppercase transition-colors text-blue-500/50`}>Active Now</p>
               </div>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg transition-all ${theme === 'naruto' ? 'bg-orange-600' : theme === 'motivational' ? 'bg-amber-500' : 'bg-blue-600'}`}>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg transition-all bg-blue-600`}>
                 <User size={24} />
               </div>
             </div>
