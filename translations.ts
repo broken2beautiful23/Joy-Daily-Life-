@@ -52,7 +52,7 @@ export const translations = {
     theme_emerald: "এমারেল্ড নেচার",
     theme_dark: "মিডনাইট ডার্ক",
     theme_naruto: "হকেজ অরেঞ্জ (Naruto)",
-    theme_motivational: "মোটিভেশনাল লাইট (Sun)",
+    theme_motivational: "মো티브েশনাল লাইট (Sun)",
     work_log_title: "কাজ ও শিখন লগ",
     work_hours: "কাজের ঘণ্টা",
     learning_today: "আজ যা শিখলাম",
@@ -84,14 +84,18 @@ export const translations = {
     log_this_session: "সেশনটি লগ করুন",
     focus_motivation: "পুরো মনোযোগ দিয়ে কাজ করুন!",
     break_motivation: "একটু বিশ্রাম নিন, রিফ্রেশ হন!",
-    ai_assistant: "গ্ৰোক এআই",
-    ai_name: "গ্ৰোক (Grok)",
-    ai_role: "স্মার্ট অ্যাসিস্ট্যান্ট",
-    ask_joy: "গ্ৰোককে কিছু জিজ্ঞাসা করুন...",
     plan_day: "দিনের পরিকল্পনা",
     get_motivation: "মোটিভেশন নিন",
     money_save: "টাকা জমানোর উপায়",
-    quick_tips: "দ্রুত পরামর্শ"
+    quick_tips: "দ্রুত পরামর্শ",
+    health_title: "লাইফস্টাইল ও স্বাস্থ্য",
+    diet_recipes: "খাদ্যাভ্যাস ও রেসিপি",
+    fitness_yoga: "ব্যায়াম ও ফিটনেস",
+    mental_wellness: "মানসিক স্বাস্থ্য",
+    quick_health_log: "আজকের হেলথ লগ",
+    meditation: "মেডিটেশন",
+    hydration: "পানি পান",
+    water_target: "লিটার লক্ষ্য"
   },
   en: {
     app_name: "JoyLife",
@@ -177,14 +181,18 @@ export const translations = {
     log_this_session: "Log Session",
     focus_motivation: "Stay focused on your task!",
     break_motivation: "Take a deep breath and relax.",
-    ai_assistant: "Grok AI",
-    ai_name: "Grok",
-    ai_role: "Smart Assistant",
-    ask_joy: "Ask Grok something...",
     plan_day: "Plan the day",
     get_motivation: "Get Motivation",
     money_save: "Money Saving Tips",
-    quick_tips: "Quick Tips"
+    quick_tips: "Quick Tips",
+    health_title: "Lifestyle & Health",
+    diet_recipes: "Diet & Recipes",
+    fitness_yoga: "Fitness & Yoga",
+    mental_wellness: "Mental Wellness",
+    quick_health_log: "Quick Health Log",
+    meditation: "Meditation",
+    hydration: "Hydration",
+    water_target: "Liters Target"
   }
 };
 

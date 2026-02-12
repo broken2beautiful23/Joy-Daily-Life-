@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NAVIGATION_ITEMS } from './constants';
 import Dashboard from './components/Dashboard';
 import Diary from './components/Diary';
@@ -13,14 +13,13 @@ import WorkLog from './components/WorkLog';
 import MotivationalStories from './components/MotivationalStories';
 import ProfessionalWork from './components/ProfessionalWork';
 import WorkTimer from './components/WorkTimer';
-import AICoach from './components/AICoach';
-import FloatingAI from './components/FloatingAI';
+import LifestyleHealth from './components/LifestyleHealth';
 import { translations, Language } from './translations';
 import { supabase } from './services/supabase';
 import { 
   Lock, LogOut, Menu, X, Sparkles, Mail, 
   ArrowRight, ShieldCheck, RefreshCw, 
-  User, Loader2, Eye, EyeOff, Flame, Sun
+  User, Loader2, Eye, EyeOff, Flame, Sun, Search, Command
 } from 'lucide-react';
 
 type AppTheme = 'blue' | 'rose' | 'emerald' | 'dark' | 'naruto' | 'motivational';
@@ -33,6 +32,12 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState<AppTheme>('blue');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  
+  // Search State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
   const t = translations[lang];
 
   // Auth Form State
@@ -75,8 +80,17 @@ const App: React.FC = () => {
       document.body.className = savedTheme;
     }
 
+    // Close search dropdown when clicking outside
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+
     return () => {
       subscription.unsubscribe();
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -91,6 +105,11 @@ const App: React.FC = () => {
     setLang(newLang);
     localStorage.setItem('joylife_lang', newLang);
   };
+
+  const filteredSearchItems = NAVIGATION_ITEMS.filter(item => 
+    item.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    item.id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -393,13 +412,71 @@ const App: React.FC = () => {
 
       <main className="flex-1 h-screen overflow-y-auto flex flex-col relative custom-scrollbar">
         <header className={`sticky top-0 z-30 w-full h-24 backdrop-blur-2xl border-b px-8 lg:px-12 flex items-center justify-between transition-all ${theme === 'dark' || theme === 'naruto' ? 'bg-slate-950/80 border-slate-800' : theme === 'motivational' ? 'bg-white/60 border-amber-50' : 'bg-white/60 border-blue-50'}`}>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 flex-1">
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`p-3 lg:hidden rounded-2xl transition-all ${theme === 'naruto' ? 'text-orange-500 hover:bg-orange-500/10' : theme === 'motivational' ? 'text-amber-600 hover:bg-amber-50' : 'text-blue-600 hover:bg-blue-50'}`}>
               {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
-            <h2 className={`hidden md:block text-[11px] font-black uppercase tracking-[0.3em] transition-colors ${theme === 'naruto' ? 'text-orange-500/50' : theme === 'motivational' ? 'text-amber-500/50' : 'text-blue-500/50'}`}>
-              {NAVIGATION_ITEMS.find(i => i.id === activeTab)?.label || 'JOY LIFE'}
-            </h2>
+            
+            {/* SEARCH BAR */}
+            <div ref={searchRef} className="relative hidden sm:block w-full max-w-md ml-4">
+               <div className="relative group">
+                 <Search className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${isSearchFocused ? 'text-blue-600' : 'text-slate-400'}`} size={18} />
+                 <input 
+                   type="text" 
+                   value={searchQuery}
+                   onFocus={() => setIsSearchFocused(true)}
+                   onChange={(e) => setSearchQuery(e.target.value)}
+                   placeholder={lang === 'bn' ? "কি খুঁজছেন? ফিচারের নাম লিখুন..." : "What are you looking for? Search features..."}
+                   className={`w-full pl-14 pr-12 py-3.5 bg-slate-50/50 border border-transparent rounded-2xl font-bold text-sm outline-none transition-all ${isSearchFocused ? 'bg-white border-blue-200 ring-4 ring-blue-500/5' : 'hover:bg-slate-100/50'}`}
+                 />
+                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-40 pointer-events-none">
+                    <Command size={14} />
+                    <span className="text-[10px] font-black">K</span>
+                 </div>
+               </div>
+
+               {isSearchFocused && (
+                 <div className="absolute top-full left-0 w-full mt-3 bg-white/95 backdrop-blur-3xl rounded-3xl border border-blue-50 shadow-2xl shadow-blue-500/10 p-2 overflow-hidden animate-in slide-in-from-top-2 duration-300 z-50">
+                    <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
+                      {filteredSearchItems.length > 0 ? filteredSearchItems.map((item) => (
+                        <button 
+                          key={item.id} 
+                          onClick={() => { setActiveTab(item.id); setIsSearchFocused(false); setSearchQuery(''); }}
+                          className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-blue-50 transition-all text-left group"
+                        >
+                          <div className={`p-2 rounded-xl transition-colors ${activeTab === item.id ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-blue-600 shadow-inner'}`}>
+                            {item.icon}
+                          </div>
+                          <div>
+                            <p className={`font-black text-sm ${activeTab === item.id ? 'text-blue-600' : 'text-slate-800'}`}>
+                              {lang === 'bn' ? item.label : item.id.toUpperCase()}
+                            </p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 opacity-70">
+                              {lang === 'bn' ? 'সরাসরি যাওয়ার জন্য ক্লিক করুন' : 'Click to navigate'}
+                            </p>
+                          </div>
+                        </button>
+                      )) : (
+                        <div className="p-10 text-center">
+                           <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                              <Search className="text-slate-300" size={32} />
+                           </div>
+                           <p className="text-slate-400 font-bold text-xs uppercase tracking-widest leading-relaxed">
+                              {lang === 'bn' ? 'দুঃখিত, কোনো ফিচার খুঁজে পাওয়া যায়নি' : 'Sorry, no features found'}
+                           </p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mt-2 p-4 bg-slate-50/50 rounded-2xl border-t border-slate-50 flex items-center justify-between">
+                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                         <Sparkles size={12} className="text-blue-500" /> কুইক টিপ: যেকোনো ফিচারের নাম লিখুন
+                       </p>
+                       <span className="text-[9px] font-black text-blue-500/40 uppercase tracking-widest">Joy Life Smart Search</span>
+                    </div>
+                 </div>
+               )}
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -443,7 +520,7 @@ const App: React.FC = () => {
               const props = { lang, userName, userId };
               switch (activeTab) {
                 case 'dashboard': return <Dashboard {...props} />;
-                case 'aicoach': return <AICoach {...props} />;
+                case 'health': return <LifestyleHealth {...props} />;
                 case 'worktimer': return <WorkTimer {...props} />;
                 case 'profwork': return <ProfessionalWork {...props} />;
                 case 'worklog': return <WorkLog {...props} />;
@@ -460,9 +537,6 @@ const App: React.FC = () => {
             })()}
           </div>
         </div>
-        
-        {/* Global Floating AI Assistant */}
-        <FloatingAI lang={lang} userName={userName} />
       </main>
     </div>
   );

@@ -13,16 +13,16 @@ import {
   Star,
   Cpu,
   Timer,
-  Sparkles
+  HeartPulse
 } from 'lucide-react';
 
 export const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard size={20} /> },
-  { id: 'aicoach', label: 'গ্ৰোক এআই', icon: <Sparkles size={20} className="text-indigo-500 animate-pulse" /> },
+  { id: 'health', label: 'লাইফস্টাইল ও স্বাস্থ্য', icon: <HeartPulse size={20} className="text-rose-500" /> },
   { id: 'worktimer', label: 'ওয়ার্ক টাইমার', icon: <Timer size={20} className="text-orange-500" /> },
   { id: 'profwork', label: 'প্রফেশনাল কাজ', icon: <Cpu size={20} /> },
   { id: 'worklog', label: 'কাজ ও শিখন লগ', icon: <Briefcase size={20} /> },
-  { id: 'stories', label: 'মোটিভেশনাল গল্প', icon: <Star size={20} /> },
+  { id: 'stories', label: 'মোティブেশনাল গল্প', icon: <Star size={20} /> },
   { id: 'diary', label: 'ডায়েরি', icon: <BookText size={20} /> },
   { id: 'tasks', label: 'কাজ (To-Do)', icon: <CheckSquare size={20} /> },
   { id: 'expenses', label: 'আয় ও ব্যয়', icon: <Wallet size={20} /> },
