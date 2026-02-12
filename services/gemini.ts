@@ -4,7 +4,7 @@ import { GoogleGenAI, Modality } from "@google/genai";
 /**
  * জয় (Joy) এর জন্য সিস্টেম ইনস্ট্রাকশন। 
  */
-const JOY_SYSTEM_PROMPT = "আপনার নাম জয়। আপনি একজন বন্ধুসুলভ পার্সোনাল লাইফ কোচ। সবসময় মিষ্টিভাবে বাংলায় কথা বলুন। ব্যবহারকারীর প্রতিটি কথার সুন্দর এবং অনুপ্রেরণামূলক উত্তর দিন। আপনার মূল লক্ষ্য ব্যবহারকারীকে মোটিভেট করা এবং তার কাজে সাহায্য করা। আপনার উত্তর ছোট এবং আকর্ষণীয় রাখুন। কোনো এপিআই বা টেকনিক্যাল কথা বলবেন না।";
+const JOY_SYSTEM_PROMPT = "আপনার নাম জয়। আপনি একজন বন্ধুসুলভ পার্সোনাল লাইফ কোচ। সবসময় মিষ্টিভাবে বাংলায় কথা বলুন। ব্যবহারকারীর প্রতিটি কথার সুন্দর এবং অনুপ্রেরণামূলক উত্তর দিন। আপনার মূল লক্ষ্য ব্যবহারকারীকে মোটিভেট করা এবং তার কাজে সাহায্য করা। আপনার উত্তর ছোট এবং আকর্ষণীয় রাখুন।";
 
 const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
@@ -14,14 +14,16 @@ const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
  * @google/genai এর স্ট্যান্ডার্ড গাইডলাইন মেনে তৈরি।
  */
 export async function* chatWithJoyStream(userMessage: string, userData: any) {
+  // এপিআই কী সরাসরি চেক করা হচ্ছে প্রতি কলের সময়
   const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    console.error("Critical: API Key is missing from environment.");
-    yield "দুঃখিত বন্ধু, এআই সার্ভারের সাথে সংযোগের জন্য প্রয়োজনীয় কী (API Key) খুঁজে পাওয়া যাচ্ছে না। দয়া করে এডমিনকে জানান।";
+  
+  if (!apiKey || apiKey === "undefined") {
+    console.error("Joy AI: API Key is missing. Check environment variables.");
+    yield "দুঃখিত বন্ধু, আমার সিস্টেমে সামান্য টেকনিক্যাল সমস্যা হচ্ছে। দয়া করে আপনার ইন্টারনেট চেক করুন অথবা কিছুক্ষণ পর আবার চেষ্টা করুন।";
     return;
   }
 
-  // এপিআই কল করার আগে প্রতিবার নতুন করে ইন্সট্যান্স তৈরি করা হচ্ছে স্ট্যাবিলিটি নিশ্চিত করতে
+  // নতুন ইন্সট্যান্স তৈরি
   const ai = new GoogleGenAI({ apiKey });
   
   try {
@@ -30,37 +32,30 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
       contents: [{
         role: 'user',
         parts: [{ 
-          text: `ব্যবহারকারীর নাম: ${userData.userName || 'বন্ধু'}। ব্যবহারকারীর বর্তমান বার্তা: "${userMessage}"` 
+          text: `ব্যবহারকারী: ${userData.userName || 'বন্ধু'}। মেসেজ: "${userMessage}"` 
         }]
       }],
       config: {
         systemInstruction: JOY_SYSTEM_PROMPT,
-        temperature: 0.8,
+        temperature: 0.85,
         topP: 0.9,
       },
     });
 
-    let hasData = false;
+    let receivedAnyData = false;
     for await (const chunk of responseStream) {
-      const text = chunk.text;
-      if (text) {
-        hasData = true;
-        yield text;
+      if (chunk.text) {
+        receivedAnyData = true;
+        yield chunk.text;
       }
     }
 
-    if (!hasData) {
-      yield "দুঃখিত বন্ধু, আমি এই মুহূর্তে উত্তর তৈরি করতে পারছি না। দয়া করে আবার চেষ্টা করো।";
+    if (!receivedAnyData) {
+      yield "দুঃখিত বন্ধু, আমি এই মুহূর্তে উত্তর তৈরি করতে পারছি না। দয়া করে আবার মেসেজ দিন।";
     }
   } catch (error: any) {
-    console.error("Gemini Stream Error Details:", error);
-    if (error.message?.includes('403')) {
-      yield "দুঃখিত বন্ধু, এপিআই কী-তে সমস্যা দেখা দিয়েছে (Permission Denied)।";
-    } else if (error.message?.includes('429')) {
-      yield "আমি এখন একটু বেশি ব্যস্ত আছি, দয়া করে ১ মিনিট পর আবার মেসেজ দিন।";
-    } else {
-      yield "দুঃখিত বন্ধু, নেটওয়ার্কে সামান্য সমস্যা হচ্ছে। দয়া করে আপনার ইন্টারনেট চেক করে আবার চেষ্টা করো।";
-    }
+    console.error("Gemini connection error:", error);
+    yield "দুঃখিত বন্ধু, সংযোগ বিচ্ছিন্ন হয়েছে। দয়া করে আবার চেষ্টা করুন।";
   }
 }
 
@@ -69,7 +64,7 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
  */
 export async function speakText(text: string): Promise<string | null> {
   const apiKey = process.env.API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey || apiKey === "undefined") return null;
 
   const ai = new GoogleGenAI({ apiKey });
   
@@ -87,10 +82,9 @@ export async function speakText(text: string): Promise<string | null> {
       },
     });
 
-    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    return audioData || null;
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
   } catch (error: any) {
-    console.error("Voice Generation Error:", error);
+    console.error("Joy Voice error:", error);
     return null;
   }
 }
