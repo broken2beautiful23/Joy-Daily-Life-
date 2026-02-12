@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, X, Sparkles, 
-  Minimize2, Volume2, VolumeX, Mic, MicOff, RotateCcw, Zap, Globe
+  Minimize2, Volume2, VolumeX, Mic, MicOff, RotateCcw, Zap, Globe, RefreshCcw
 } from 'lucide-react';
 import { chatWithJoyStream, speakText, isApiKeyAvailable } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -21,58 +21,47 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [isListening, setIsListening] = useState(false);
   const [hasKey, setHasKey] = useState(isApiKeyAvailable());
+  const [isActivating, setIsActivating] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const recognitionRef = useRef<any>(null);
   const t = translations[lang];
 
-  useEffect(() => {
-    const checkKeyOnOpen = async () => {
-      if (isOpen) {
-        const aiStudio = (window as any).aistudio;
-        if (aiStudio) {
-          const selected = await aiStudio.hasSelectedApiKey();
-          if (selected || isApiKeyAvailable()) setHasKey(true);
-        } else if (isApiKeyAvailable()) {
-          setHasKey(true);
-        }
+  const handleActivateJoy = async () => {
+    const aiStudio = (window as any).aistudio;
+    if (aiStudio) {
+      setIsActivating(true);
+      try {
+        // Platform Instruction: Trigger dialog and proceed assuming success
+        await aiStudio.openSelectKey();
+        setHasKey(true);
+        // Instant feedback for user
+        const successMsg = lang === 'bn' ? "জয় এখন আপনার সাথে আছে! কথা শুরু করুন।" : "Joy is now with you! Start chatting.";
+        setMessages([{ role: 'joy', text: successMsg }]);
+      } catch (e) {
+        console.error("Activation error", e);
+      } finally {
+        setIsActivating(false);
       }
-    };
-    checkKeyOnOpen();
-  }, [isOpen]);
+    } else {
+      setHasKey(isApiKeyAvailable());
+    }
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [messages, isTyping]);
 
   useEffect(() => {
-    if (isOpen && messages.length === 0) {
+    if (isOpen && messages.length === 0 && hasKey) {
       const greeting = lang === 'bn' 
         ? `নমস্কার ${userName}! আমি জয়। আজ কীভাবে আপনাকে সাহায্য করতে পারি?` 
         : `Hello ${userName}! I am Joy. How can I help you today?`;
       setMessages([{ role: 'joy', text: greeting }]);
     }
-  }, [isOpen, userName, lang]);
-
-  const handleActivateJoy = async () => {
-    const aiStudio = (window as any).aistudio;
-    if (aiStudio) {
-      try {
-        await aiStudio.openSelectKey();
-        setHasKey(true); // Proceed as per platform instructions
-      } catch (e) {
-        console.error("Activation failed", e);
-      }
-    } else {
-      alert(lang === 'bn' ? "এই ব্রাউজারে জয়কে সক্রিয় করা যাচ্ছে না।" : "Activation not available in this browser.");
-    }
-  };
+  }, [isOpen, hasKey, userName, lang]);
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -106,14 +95,15 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         success = true;
       }
     } catch (err: any) {
-      if (err.message === "KEY_MISSING") {
+      if (err.message === "KEY_MISSING" || err.message === "KEY_INVALID") {
         setHasKey(false);
+        handleActivateJoy(); // Force re-activation on error
       }
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = { 
           role: 'joy', 
-          text: lang === 'bn' ? "দুঃখিত বন্ধু, সংযোগ বিচ্ছিন্ন হয়েছে। দয়া করে আবার চেষ্টা করুন।" : "Connection failed. Please try again.",
+          text: lang === 'bn' ? "দুঃখিত বন্ধু, আমি সংযোগ করতে পারছি না। দয়া করে আবার কানেক্ট করুন।" : "Sorry friend, connection failed. Please re-connect.",
           isError: true
         };
         return updated;
@@ -131,22 +121,15 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     try {
       const base64Audio = await speakText(text);
       if (base64Audio) {
-        if (!audioContextRef.current) {
-          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-        }
+        if (!audioContextRef.current) audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
         const ctx = audioContextRef.current;
         const binaryString = atob(base64Audio);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
         const dataInt16 = new Int16Array(bytes.buffer);
         const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
         const channelData = buffer.getChannelData(0);
-        for (let i = 0; i < dataInt16.length; i++) {
-          channelData[i] = dataInt16[i] / 32768.0;
-        }
+        for (let i = 0; i < dataInt16.length; i++) channelData[i] = dataInt16[i] / 32768.0;
         const source = ctx.createBufferSource();
         source.buffer = buffer;
         source.connect(ctx.destination);
@@ -181,19 +164,22 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50/50 custom-scrollbar">
             {!hasKey && (
-              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-8 rounded-[32px] border border-blue-100 text-center space-y-4 animate-in fade-in duration-500">
-                <div className="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto shadow-xl">
-                  <Zap size={32} />
+              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-10 rounded-[32px] border border-blue-100 text-center space-y-6 animate-in fade-in duration-500">
+                <div className="w-20 h-20 bg-blue-600 text-white rounded-3xl flex items-center justify-center mx-auto shadow-xl ring-8 ring-blue-50">
+                  {isActivating ? <RefreshCcw size={32} className="animate-spin" /> : <Zap size={32} />}
                 </div>
-                <h4 className="font-black text-slate-800">জয়কে সক্রিয় করুন</h4>
-                <p className="text-xs font-bold text-slate-500 leading-relaxed">
-                  অন্যান্য ডিভাইসে ব্যবহারের জন্য একবার জয়কে সক্রিয় করে নিন। এটি একদম সহজ!
-                </p>
+                <div>
+                  <h4 className="font-black text-slate-800 text-lg">জয়কে সক্রিয় করুন</h4>
+                  <p className="text-xs font-bold text-slate-500 leading-relaxed mt-2">
+                    নিচের বাটনে ক্লিক করে জয়ের সাথে যুক্ত হোন। এটি অন্য সব ডিভাইসেও কাজ করবে।
+                  </p>
+                </div>
                 <button 
                   onClick={handleActivateJoy}
-                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  disabled={isActivating}
+                  className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                 >
-                  <Globe size={18} /> কানেক্ট করুন
+                  <Globe size={18} /> {isActivating ? 'লোডিং...' : 'এখনই কানেক্ট করুন'}
                 </button>
               </div>
             )}
@@ -209,8 +195,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                 }`}>
                   {msg.text || (msg.role === 'joy' ? 'জয় উত্তর দিচ্ছে...' : '')}
                   {msg.isError && (
-                    <button onClick={() => setMessages([])} className="mt-2 flex items-center gap-1 text-[10px] font-black uppercase text-rose-500 hover:text-rose-700">
-                      <RotateCcw size={10} /> পুনরায় শুরু করুন
+                    <button onClick={handleActivateJoy} className="mt-3 flex items-center gap-2 text-[10px] font-black uppercase text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg">
+                      <Zap size={10} /> আবার কানেক্ট করুন
                     </button>
                   )}
                 </div>
@@ -229,21 +215,18 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
           <div className="p-6 bg-white border-t border-slate-50">
             <div className="flex gap-3">
-              <button onClick={() => isListening ? recognitionRef.current?.stop() : recognitionRef.current?.start()} className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${isListening ? 'bg-rose-500 text-white shadow-lg animate-pulse' : 'bg-slate-100 text-slate-500'}`}>
-                {isListening ? <MicOff size={24} /> : <Mic size={24} />}
-              </button>
               <form onSubmit={handleSendMessage} className="relative flex-1">
                 <input 
                   type="text" 
                   value={input} 
                   onChange={(e) => setInput(e.target.value)} 
-                  placeholder={hasKey ? t.ask_joy : "আগে জয়কে অ্যাক্টিভেট করুন..."} 
+                  placeholder={hasKey ? t.ask_joy : "প্রথমে কানেক্ট করুন..."} 
                   className="w-full pl-6 pr-14 py-4 bg-slate-100 rounded-[20px] font-bold outline-none border-2 border-transparent focus:border-blue-500/10 focus:bg-white transition-all shadow-inner" 
-                  disabled={isTyping}
+                  disabled={isTyping || !hasKey}
                 />
                 <button 
                   type="submit" 
-                  disabled={!input.trim() || isTyping} 
+                  disabled={!input.trim() || isTyping || !hasKey} 
                   className="absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-11 bg-orange-400 text-white rounded-xl flex items-center justify-center disabled:opacity-50 hover:bg-orange-500 transition-colors shadow-sm"
                 >
                   <Send size={20} />

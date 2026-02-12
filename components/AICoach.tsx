@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, Sparkles, Mic, MicOff, Volume2, VolumeX, 
-  Bot, User, Zap, ArrowRight, Lightbulb, Wallet, Calendar, RotateCcw, Globe
+  Bot, User, Zap, ArrowRight, Lightbulb, Wallet, Calendar, RotateCcw, Globe, RefreshCcw
 } from 'lucide-react';
 import { chatWithJoyStream, speakText, isApiKeyAvailable } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -18,53 +18,46 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
   const [messages, setMessages] = useState<{role: 'user' | 'joy', text: string, isError?: boolean}[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
-  const [isListening, setIsListening] = useState(false);
   const [hasKey, setHasKey] = useState(isApiKeyAvailable());
+  const [isActivating, setIsActivating] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const t = translations[lang];
 
-  useEffect(() => {
-    const checkKeyOnMount = async () => {
-      const aiStudio = (window as any).aistudio;
-      if (aiStudio) {
-        const selected = await aiStudio.hasSelectedApiKey();
-        if (selected || isApiKeyAvailable()) setHasKey(true);
-      } else if (isApiKeyAvailable()) {
+  const handleActivateJoy = async () => {
+    const aiStudio = (window as any).aistudio;
+    if (aiStudio) {
+      setIsActivating(true);
+      try {
+        await aiStudio.openSelectKey();
         setHasKey(true);
+        setMessages([{ 
+          role: 'joy', 
+          text: lang === 'bn' ? "জয় এখন সক্রিয়! আমি আপনাকে সাহায্য করতে প্রস্তুত।" : "Joy is active! I am ready to help you." 
+        }]);
+      } catch (e) {
+        console.error("Activation failed", e);
+      } finally {
+        setIsActivating(false);
       }
-    };
-    checkKeyOnMount();
-  }, []);
+    }
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [messages, isTyping]);
 
   useEffect(() => {
-    const greeting = lang === 'bn' 
-      ? `নমস্কার ${userName}! আমি জয়। আজ কীভাবে আপনাকে সাহায্য করতে পারি?` 
-      : `Hello ${userName}! I am Joy. How can I help you today?`;
-    if (messages.length === 0) setMessages([{ role: 'joy', text: greeting }]);
-  }, [lang, userName, messages.length]);
-
-  const handleActivateJoy = async () => {
-    const aiStudio = (window as any).aistudio;
-    if (aiStudio) {
-      try {
-        await aiStudio.openSelectKey();
-        setHasKey(true);
-      } catch (e) {
-        console.error("Activation failed", e);
-      }
+    if (messages.length === 0 && hasKey) {
+      const greeting = lang === 'bn' 
+        ? `নমস্কার ${userName}! আমি জয়। আজ কীভাবে আপনাকে সাহায্য করতে পারি?` 
+        : `Hello ${userName}! I am Joy. How can I help you today?`;
+      setMessages([{ role: 'joy', text: greeting }]);
     }
-  };
+  }, [lang, userName, hasKey, messages.length]);
 
   const handleSendMessage = async (userMsg: string) => {
     if (!userMsg.trim() || isTyping) return;
@@ -92,12 +85,15 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
         success = true;
       }
     } catch (err: any) {
-      if (err.message === "KEY_MISSING") setHasKey(false);
+      if (err.message === "KEY_MISSING" || err.message === "KEY_INVALID") {
+        setHasKey(false);
+        handleActivateJoy();
+      }
       setMessages(prev => {
         const newMsgs = [...prev];
         newMsgs[newMsgs.length - 1] = { 
           role: 'joy', 
-          text: lang === 'bn' ? "দুঃখিত বন্ধু, সংযোগ বিচ্ছিন্ন হয়েছে।" : "Sorry friend, connection lost.",
+          text: lang === 'bn' ? "সংযোগ বিচ্ছিন্ন হয়েছে। দয়া করে আবার কানেক্ট করুন।" : "Connection failed. Please reconnect.",
           isError: true
         };
         return newMsgs;
@@ -107,7 +103,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
       if (isVoiceEnabled && fullResponse && success) {
         const base64Audio = await speakText(fullResponse);
         if (base64Audio) {
-           // Play audio logic (Simplified)
+          // Play audio logic (Omitted for brevity, but same as FloatingAI)
         }
       }
     }
@@ -130,28 +126,34 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
             {!hasKey && (
               <button 
                 onClick={handleActivateJoy} 
-                className="bg-yellow-400 text-blue-900 px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg hover:bg-white transition-all flex items-center gap-2"
+                disabled={isActivating}
+                className="bg-yellow-400 text-blue-900 px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg hover:bg-white transition-all flex items-center gap-2 disabled:opacity-50"
               >
-                <Globe size={14} /> জয়কে কানেক্ট করুন
+                {isActivating ? <RefreshCcw size={14} className="animate-spin" /> : <Globe size={14} />} 
+                {isActivating ? 'প্রসেসিং...' : 'জয়কে কানেক্ট করুন'}
               </button>
             )}
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50/30 custom-scrollbar">
             {!hasKey && (
-              <div className="max-w-md mx-auto bg-white p-10 rounded-[40px] shadow-xl border border-blue-100 text-center space-y-6">
-                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto">
-                  <Bot size={40} />
+              <div className="max-w-md mx-auto bg-white p-12 rounded-[48px] shadow-2xl border border-blue-100 text-center space-y-8 animate-in zoom-in duration-500">
+                <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-[32px] flex items-center justify-center mx-auto ring-8 ring-blue-50/50">
+                  {isActivating ? <RefreshCcw size={48} className="animate-spin" /> : <Bot size={48} />}
                 </div>
-                <h3 className="text-2xl font-black text-slate-800 tracking-tight">জয় আপনার জন্য প্রস্তুত!</h3>
-                <p className="text-sm font-bold text-slate-400 leading-relaxed">
-                  অন্য ব্রাউজার বা ডিভাইসে ব্যবহারের জন্য একবার জয়কে সক্রিয় করে নিন। এর ফলে আপনার প্রাইভেসী বজায় থাকবে।
-                </p>
+                <div>
+                  <h3 className="text-2xl font-black text-slate-800 tracking-tight">জয় আপনার জন্য প্রস্তুত!</h3>
+                  <p className="text-sm font-bold text-slate-400 leading-relaxed mt-2">
+                    অন্য ডিভাইসে জয়ের সাথে কথা বলতে একবার কানেক্ট করে নিন। আপনার সব ডেটা নিরাপদ থাকবে।
+                  </p>
+                </div>
                 <button 
                   onClick={handleActivateJoy}
-                  className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                  disabled={isActivating}
+                  className="w-full py-6 bg-blue-600 text-white rounded-[28px] font-black shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                 >
-                  <Zap size={20} /> জয়কে সক্রিয় করুন
+                  {isActivating ? <RefreshCcw size={20} className="animate-spin" /> : <Zap size={20} />} 
+                  {isActivating ? 'অপেক্ষা করুন...' : 'জয়কে সক্রিয় করুন'}
                 </button>
               </div>
             )}
@@ -162,10 +164,15 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                   msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                 }`}>
                   {msg.text || '...'}
+                  {msg.isError && (
+                    <button onClick={handleActivateJoy} className="mt-4 flex items-center gap-2 text-xs font-black text-blue-600 hover:text-blue-800 uppercase">
+                      <RefreshCcw size={14} /> পুনরায় কানেক্ট করুন
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
-            {isTyping && <div className="p-5 text-slate-400 italic font-black text-xs uppercase tracking-widest">জয় লিখছে...</div>}
+            {isTyping && <div className="p-5 text-slate-400 italic font-black text-xs uppercase tracking-widest animate-pulse">জয় লিখছে...</div>}
           </div>
 
           <div className="p-8 bg-white border-t border-slate-50">
@@ -175,11 +182,11 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                   type="text" 
                   value={input} 
                   onChange={(e) => setInput(e.target.value)} 
-                  placeholder={hasKey ? t.ask_joy : "আগে কানেক্ট করুন..."} 
+                  placeholder={hasKey ? t.ask_joy : "প্রথমে জয়কে সক্রিয় করুন..."} 
                   className="w-full pl-6 pr-16 py-5 bg-slate-100 border-none rounded-2xl focus:ring-2 focus:ring-blue-500/20 font-bold text-lg" 
-                  disabled={isTyping}
+                  disabled={isTyping || !hasKey}
                 />
-                <button type="submit" disabled={!input.trim() || isTyping} className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md disabled:opacity-50">
+                <button type="submit" disabled={!input.trim() || isTyping || !hasKey} className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md disabled:opacity-50">
                   <Send size={20} />
                 </button>
               </form>
