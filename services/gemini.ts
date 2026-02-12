@@ -8,10 +8,14 @@ const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
 
 /**
  * Direct stream with Grok.
- * No API key prompts or activation needed as per environment setup.
  */
 export async function* chatWithGrokStream(userMessage: string, userData: any) {
-  const apiKey = process.env.API_KEY;
+  const apiKey = process.env.API_KEY || '';
+  if (!apiKey) {
+    yield "এপিআই কী পাওয়া যায়নি। দয়া করে সেটিংস চেক করুন।";
+    return;
+  }
+  
   const ai = new GoogleGenAI({ apiKey });
   
   try {
@@ -44,7 +48,9 @@ export async function* chatWithGrokStream(userMessage: string, userData: any) {
  * Text-to-speech for Grok.
  */
 export async function speakText(text: string): Promise<string | null> {
-  const apiKey = process.env.API_KEY;
+  const apiKey = process.env.API_KEY || '';
+  if (!apiKey) return null;
+  
   const ai = new GoogleGenAI({ apiKey });
   
   try {

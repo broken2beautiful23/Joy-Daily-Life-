@@ -13,11 +13,17 @@ import {
   Star,
   Cpu,
   Timer,
-  HeartPulse
+  HeartPulse,
+  Newspaper,
+  Rocket,
+  Music
 } from 'lucide-react';
 
 export const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard size={20} /> },
+  { id: 'essentials', label: 'নিত্যপ্রয়োজনীয় তথ্য', icon: <Newspaper size={20} className="text-indigo-500" /> },
+  { id: 'education', label: 'শিক্ষা ও ক্যারিয়ার', icon: <Rocket size={20} className="text-orange-500" /> },
+  { id: 'entertainment', label: 'বিনোদন ও শখ', icon: <Music size={20} className="text-pink-500" /> },
   { id: 'health', label: 'লাইফস্টাইল ও স্বাস্থ্য', icon: <HeartPulse size={20} className="text-rose-500" /> },
   { id: 'worktimer', label: 'ওয়ার্ক টাইমার', icon: <Timer size={20} className="text-orange-500" /> },
   { id: 'profwork', label: 'প্রফেশনাল কাজ', icon: <Cpu size={20} /> },

@@ -14,31 +14,34 @@ import MotivationalStories from './components/MotivationalStories';
 import ProfessionalWork from './components/ProfessionalWork';
 import WorkTimer from './components/WorkTimer';
 import LifestyleHealth from './components/LifestyleHealth';
+import DailyEssentials from './components/DailyEssentials';
+import EducationCareer from './components/EducationCareer';
+import EntertainmentHobbies from './components/EntertainmentHobbies';
+import FloatingAI from './components/FloatingAI';
+import HabitTracker from './components/HabitTracker';
 import { translations, Language } from './translations';
 import { supabase } from './services/supabase';
 import { 
   Lock, LogOut, Menu, X, Sparkles, Mail, 
-  ArrowRight, ShieldCheck, RefreshCw, 
-  User, Loader2, Eye, EyeOff, Flame, Sun, Search, Command
+  ArrowRight, RefreshCw, 
+  User, Loader2, Eye, EyeOff, Search, Command,
+  Sun, Moon, Facebook, Instagram, Twitter, Github, Heart
 } from 'lucide-react';
-
-type AppTheme = 'blue' | 'rose' | 'emerald' | 'dark' | 'naruto' | 'motivational';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [lang, setLang] = useState<Language>('bn');
-  const [theme] = useState<AppTheme>('blue'); // Locked to blue theme
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState('ইউজার');
   
-  // Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-
-  const t = translations[lang];
+  const t = translations[lang] || translations['bn'];
 
   // Auth Form State
   const [email, setEmail] = useState('');
@@ -49,10 +52,8 @@ const App: React.FC = () => {
   const [verificationCodeInput, setVerificationCodeInput] = useState(['', '', '', '', '', '']);
   const [authStage, setAuthStage] = useState<'credentials' | 'verification'>('credentials');
 
-  // Profile State
-  const [userName, setUserName] = useState('ইউজার');
-
   useEffect(() => {
+    // Check session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setIsAuthenticated(true);
@@ -61,7 +62,7 @@ const App: React.FC = () => {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session);
       if (session) {
         setUserId(session.user.id);
@@ -73,23 +74,19 @@ const App: React.FC = () => {
 
     const savedLang = localStorage.getItem('joylife_lang') as Language;
     if (savedLang) setLang(savedLang);
-    
-    // Set default theme class
-    document.body.className = 'blue';
 
-    // Close search dropdown when clicking outside
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsSearchFocused(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      subscription.unsubscribe();
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    const savedDarkMode = localStorage.getItem('joylife_darkmode') === 'true';
+    setIsDarkMode(savedDarkMode);
+    if (savedDarkMode) document.body.classList.add('dark-mode');
   }, []);
+
+  const toggleDarkMode = () => {
+    const nextMode = !isDarkMode;
+    setIsDarkMode(nextMode);
+    localStorage.setItem('joylife_darkmode', nextMode.toString());
+    if (nextMode) document.body.classList.add('dark-mode');
+    else document.body.classList.remove('dark-mode');
+  };
 
   const handleLangToggle = () => {
     const newLang = lang === 'bn' ? 'en' : 'bn';
@@ -97,97 +94,42 @@ const App: React.FC = () => {
     localStorage.setItem('joylife_lang', newLang);
   };
 
-  const filteredSearchItems = NAVIGATION_ITEMS.filter(item => 
-    item.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    item.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isAuthLoading) return;
-    
-    if (!email.trim() || !password.trim()) {
-      alert(lang === 'bn' ? "ইমেল এবং পাসওয়ার্ড দিন!" : "Please enter email and password!");
-      return;
-    }
-
-    if (isSignUp && password !== confirmPassword) {
-      alert(lang === 'bn' ? "পাসওয়ার্ড দুটি মেলেনি!" : "Passwords do not match!");
-      return;
-    }
-
-    if (password.length < 6) {
-      alert(lang === 'bn' ? "পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে!" : "Password must be at least 6 characters!");
-      return;
-    }
-
     setIsAuthLoading(true);
-    
     try {
       if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password: password,
-        });
-
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-
-        if (data.session) {
-          setIsAuthenticated(true);
-          setUserId(data.session.user.id);
-        } else if (data.user) {
+        if (data.user && !data.session) {
           setAuthStage('verification');
-          alert(lang === 'bn' ? "আপনার ইমেলে একটি ভেরিফিকেশন কোড পাঠানো হয়েছে।" : "A verification code has been sent to your email.");
         }
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password,
-        });
-
-        if (error) {
-          if (error.message.toLowerCase().includes('email not confirmed')) {
-            await supabase.auth.resend({ type: 'signup', email });
-            setAuthStage('verification');
-          } else {
-            throw error;
-          }
-        } else if (data.session) {
-          setIsAuthenticated(true);
-          setUserId(data.session.user.id);
-        }
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
       }
     } catch (err: any) {
-      alert(lang === 'bn' ? `ত্রুটি: ${err.message}` : `Error: ${err.message}`);
+      alert(err.message);
     } finally {
       setIsAuthLoading(false);
     }
   };
 
-  const handleVerify = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleVerify = async () => {
     const token = verificationCodeInput.join('');
     if (token.length < 6) return;
-
     setIsAuthLoading(true);
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: email.trim(),
+      const { error } = await supabase.auth.verifyOtp({
+        email,
         token,
-        type: isSignUp ? 'signup' : 'email'
+        type: 'signup'
       });
-
       if (error) throw error;
-
-      if (data.session) {
-        setIsAuthenticated(true);
-        setUserId(data.session.user.id);
-        setAuthStage('credentials');
-      }
+      setAuthStage('credentials');
     } catch (err: any) {
-      alert(lang === 'bn' ? "ভেরিফিকেশন কোডটি সঠিক নয়!" : "Incorrect verification code!");
-      setVerificationCodeInput(['', '', '', '', '', '']);
-      document.getElementById('code-0')?.focus();
+      alert(err.message);
     } finally {
       setIsAuthLoading(false);
     }
@@ -196,172 +138,73 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsAuthenticated(false);
-    setUserId(null);
     setActiveTab('dashboard');
   };
 
-  if (!isAuthenticated || !userId) {
+  if (!isAuthenticated) {
     return (
-      <div className={`min-h-screen flex items-center justify-center bg-blue-50 p-4 font-sans`}>
-        <div className="bg-white/90 backdrop-blur-3xl rounded-[48px] shadow-2xl p-10 w-full max-w-lg animate-in fade-in zoom-in duration-500 border border-white/50 relative z-10">
-          
-          <div className="flex justify-between items-center mb-10">
-             <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg bg-blue-600`}>
-                  <Sparkles size={20} />
-                </div>
-                <span className={`text-xs font-black uppercase tracking-widest text-blue-600`}>Joy Daily Life</span>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="glass-card rounded-[40px] p-8 md:p-12 w-full max-w-md animate-in fade-in zoom-in duration-500 shadow-2xl">
+          <div className="flex justify-between items-center mb-8">
+             <div className="flex items-center gap-2">
+                <Sparkles className="text-indigo-600" size={24} />
+                <span className="font-black text-xs uppercase tracking-widest text-indigo-600">Joy Daily Life</span>
              </div>
-             <button onClick={handleLangToggle} className="text-[10px] font-black text-slate-400 bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm">
+             <button onClick={handleLangToggle} className="text-[10px] font-black uppercase text-slate-400 border border-slate-100 px-3 py-1.5 rounded-full hover:bg-slate-50">
                {lang === 'bn' ? 'English' : 'বাংলা'}
              </button>
           </div>
 
           {authStage === 'credentials' ? (
             <>
-              <div className="text-center mb-10">
-                <h1 className="text-4xl font-black text-slate-900 tracking-tighter mb-2">
-                  {isSignUp ? (lang === 'bn' ? 'অ্যাকাউন্ট তৈরি করুন' : 'Create Account') : (lang === 'bn' ? 'স্বাগতম' : 'Welcome Back')}
-                </h1>
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
-                  {isSignUp ? (lang === 'bn' ? 'আপনার তথ্য দিয়ে শুরু করুন' : 'Start your journey today') : (lang === 'bn' ? 'আপনার অ্যাকাউন্টে লগইন করুন' : 'Login to your account')}
-                </p>
-              </div>
+              <h1 className="text-3xl font-black mb-2 tracking-tighter">
+                {isSignUp ? (lang === 'bn' ? 'অ্যাকাউন্ট তৈরি' : 'Create Account') : (lang === 'bn' ? 'স্বাগতম' : 'Welcome')}
+              </h1>
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">আপনার নিত্যদিনের বন্ধু</p>
               
-              <form onSubmit={handleAuth} className="space-y-5">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email Address</label>
-                  <div className="relative group">
-                    <Mail size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500`} />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="joy@example.com"
-                      className="w-full pl-14 pr-6 py-5 bg-white border border-slate-100 rounded-2xl focus:ring-4 focus:ring-opacity-10 outline-none transition-all font-bold"
-                      required
-                    />
-                  </div>
+              <form onSubmit={handleAuth} className="space-y-4">
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none font-bold" required />
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Password</label>
-                  <div className="relative group">
-                    <Lock size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500`} />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full pl-14 pr-14 py-5 bg-white border border-slate-100 rounded-2xl focus:ring-4 focus:ring-opacity-10 outline-none transition-all font-bold"
-                      required
-                    />
-                    <button 
-                      type="button" 
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500"
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
-
-                {isSignUp && (
-                  <div className="space-y-1 animate-in slide-in-from-top-2 duration-300">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Confirm Password</label>
-                    <div className="relative group">
-                      <ShieldCheck size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500`} />
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full pl-14 pr-6 py-5 bg-white border border-slate-100 rounded-2xl focus:ring-4 outline-none transition-all font-bold"
-                        required
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <button 
-                  type="submit" 
-                  disabled={isAuthLoading}
-                  className={`w-full py-5 rounded-2xl text-white font-black text-lg blue-btn shadow-2xl flex items-center justify-center gap-3 mt-4 disabled:opacity-70 disabled:cursor-not-allowed`}
-                >
-                  {isAuthLoading ? (
-                    <Loader2 className="animate-spin" size={24} />
-                  ) : (
-                    <>
-                      {isSignUp ? (lang === 'bn' ? 'সাইন আপ করুন' : 'Sign Up') : (lang === 'bn' ? 'লগইন করুন' : 'Login')}
-                      <ArrowRight size={20} />
-                    </>
-                  )}
-                </button>
-
-                <div className="text-center pt-4">
-                  <button 
-                    type="button"
-                    onClick={() => { setIsSignUp(!isSignUp); setAuthStage('credentials'); }}
-                    className={`text-xs font-black uppercase tracking-widest hover:underline underline-offset-4 text-blue-600`}
-                  >
-                    {isSignUp ? (lang === 'bn' ? 'আগে থেকেই অ্যাকাউন্ট আছে? লগইন করুন' : 'Already have an account? Login') : (lang === 'bn' ? 'অ্যাকাউন্ট নেই? সাইন আপ করুন' : 'Don\'t have an account? Sign Up')}
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input type={showPassword ? "text" : "password"} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-12 pr-12 py-4 bg-slate-50 rounded-2xl outline-none font-bold" required />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                <button type="submit" disabled={isAuthLoading} className="w-full blue-btn text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg">
+                  {isAuthLoading ? <Loader2 className="animate-spin" size={18} /> : (isSignUp ? 'Sign Up' : 'Login')} <ArrowRight size={18} />
+                </button>
               </form>
+              <div className="mt-6 text-center">
+                <button onClick={() => setIsSignUp(!isSignUp)} className="text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:underline">
+                  {isSignUp ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
+                </button>
+              </div>
             </>
           ) : (
             <div className="text-center animate-in slide-in-from-right duration-500">
-              <div className={`w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner`}>
-                <Mail size={40} />
-              </div>
-              <h1 className="text-3xl font-black mb-2 text-slate-900 tracking-tight">{t.verify_email}</h1>
-              <p className="text-slate-400 mb-8 font-bold text-xs uppercase tracking-widest leading-relaxed">
-                {lang === 'bn' ? 'আমরা আপনার ইমেলে একটি কোড পাঠিয়েছি:' : 'We sent a code to:'}<br/>
-                <span className={`lowercase text-blue-600`}>{email}</span>
-              </p>
-              
-              <div className="flex justify-center gap-2 mb-10">
-                {verificationCodeInput.map((d, i) => (
-                  <input key={i} id={`code-${i}`} type="text" maxLength={1} value={d} 
-                    autoFocus={i === 0}
+              <h1 className="text-3xl font-black mb-2 tracking-tighter">{t.verify_email}</h1>
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">ইমেলে পাঠানো ৬ সংখ্যার কোড দিন</p>
+              <div className="flex gap-2 justify-center mb-8">
+                {verificationCodeInput.map((val, i) => (
+                  <input key={i} id={`code-${i}`} type="text" maxLength={1} value={val} 
                     onChange={(e) => {
-                      const val = e.target.value;
-                      if (!/^\d*$/.test(val)) return;
                       const newCode = [...verificationCodeInput];
-                      newCode[i] = val;
+                      newCode[i] = e.target.value.slice(-1);
                       setVerificationCodeInput(newCode);
-                      if (val && i < 5) document.getElementById(`code-${i+1}`)?.focus();
-                      if (val && i === 5) {
-                         const finalCode = newCode.join('');
-                         if (finalCode.length === 6) setTimeout(() => handleVerify(), 100);
-                      }
+                      if (e.target.value && i < 5) document.getElementById(`code-${i+1}`)?.focus();
                     }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Backspace' && !verificationCodeInput[i] && i > 0) {
-                        document.getElementById(`code-${i-1}`)?.focus();
-                      }
-                    }}
-                    className="w-12 h-14 text-center text-2xl font-black bg-white border border-slate-200 rounded-xl focus:ring-4 outline-none transition-all"
-                    style={{ focusRingColor: 'rgba(59, 130, 246, 0.2)' } as any}
+                    className="w-10 h-12 text-center text-xl font-bold bg-slate-50 border border-slate-200 rounded-xl" 
                   />
                 ))}
               </div>
-
-              <div className="space-y-4">
-                <button 
-                  onClick={() => handleVerify()} 
-                  disabled={isAuthLoading || verificationCodeInput.join('').length < 6}
-                  className="w-full blue-btn text-white font-black py-5 rounded-2xl text-lg shadow-xl flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {isAuthLoading ? <Loader2 className="animate-spin" size={24} /> : t.verify_reg}
-                </button>
-                <div className="flex flex-col gap-2 pt-4">
-                  <button onClick={handleAuth} className={`text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 text-blue-500`}>
-                    <RefreshCw size={12}/> {t.resend_code}
-                  </button>
-                  <button onClick={() => { setAuthStage('credentials'); setIsSignUp(false); }} className="text-[10px] text-slate-400 font-black uppercase tracking-widest hover:text-slate-600">{t.cancel}</button>
-                </div>
-              </div>
+              <button onClick={handleVerify} disabled={isAuthLoading} className="w-full blue-btn text-white font-black py-4 rounded-2xl mb-4">
+                {isAuthLoading ? <Loader2 className="animate-spin mx-auto" size={24} /> : t.verify_reg}
+              </button>
+              <button onClick={() => setAuthStage('credentials')} className="text-[10px] font-black uppercase text-slate-400">{t.cancel}</button>
             </div>
           )}
         </div>
@@ -370,146 +213,142 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen transition-all duration-700 bg-blue-50/30 text-slate-900 flex font-sans`}>
-      <aside className={`fixed lg:static inset-y-0 left-0 z-40 w-72 transform transition-all duration-500 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} bg-white/80 border-blue-50 backdrop-blur-xl border-r`}>
-        <div className="h-full flex flex-col p-8">
-          <div className="flex items-center gap-4 mb-12">
-            <div className={`p-3 rounded-2xl text-white shadow-xl rotate-3 transition-all bg-blue-600`}>
-              <Sparkles size={28}/>
+    <div className="min-h-screen flex bg-slate-50/50">
+      {/* SIDEBAR */}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-72 transform transition-all duration-500 glass-card border-r border-slate-100 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="h-full flex flex-col p-8 overflow-y-auto custom-scrollbar">
+          <div className="flex items-center gap-3 mb-10">
+            <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-xl rotate-3">
+              <Sparkles size={24} />
             </div>
-            <div>
-              <h1 className={`text-2xl font-black leading-none tracking-tight transition-colors text-slate-900`}>{t.app_name}</h1>
-              <p className={`text-[10px] font-black uppercase tracking-[0.2em] mt-2 transition-colors text-blue-500/60`}>{t.personal_os}</p>
-            </div>
+            <h1 className="text-xl font-black tracking-tight text-slate-900">JoyLife OS</h1>
           </div>
           
-          <nav className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
+          <nav className="flex-1 space-y-1">
             {NAVIGATION_ITEMS.map((item) => (
               <button key={item.id} onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
-                className={`w-full flex items-center gap-4 px-6 py-4 rounded-[20px] transition-all duration-300 ${activeTab === item.id ? `blue-btn text-white font-black shadow-xl` : `text-slate-400 hover:bg-blue-50 hover:text-blue-600 font-bold`}`}>
-                <span>{item.icon}</span>
+                className={`w-full flex items-center gap-4 px-6 py-3.5 rounded-2xl transition-all duration-300 ${activeTab === item.id ? 'blue-btn text-white font-black' : 'text-slate-400 hover:bg-slate-50 hover:text-indigo-600 font-bold'}`}>
+                {item.icon}
                 <span className="text-sm tracking-tight">{lang === 'bn' ? item.label : item.id.toUpperCase()}</span>
               </button>
             ))}
           </nav>
 
-          <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
-             <button onClick={handleLogout} className="w-full flex items-center justify-center gap-3 py-4 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-[20px] font-black transition-all">
-               <LogOut size={20} /> <span className="text-sm">{t.sign_out}</span>
-             </button>
-          </div>
+          <button onClick={handleLogout} className="mt-8 flex items-center gap-3 px-6 py-4 text-rose-500 font-black hover:bg-rose-50 rounded-2xl transition-all">
+            <LogOut size={20} /> <span className="text-sm uppercase tracking-widest">{t.sign_out}</span>
+          </button>
         </div>
       </aside>
 
+      {/* MAIN CONTENT */}
       <main className="flex-1 h-screen overflow-y-auto flex flex-col relative custom-scrollbar">
-        <header className={`sticky top-0 z-30 w-full h-24 backdrop-blur-2xl border-b px-8 lg:px-12 flex items-center justify-between transition-all bg-white/60 border-blue-50`}>
-          <div className="flex items-center gap-6 flex-1">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`p-3 lg:hidden rounded-2xl transition-all text-blue-600 hover:bg-blue-50`}>
-              {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-            
-            {/* SEARCH BAR */}
-            <div ref={searchRef} className="relative hidden sm:block w-full max-w-md ml-4">
-               <div className="relative group">
-                 <Search className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${isSearchFocused ? 'text-blue-600' : 'text-slate-400'}`} size={18} />
-                 <input 
-                   type="text" 
-                   value={searchQuery}
-                   onFocus={() => setIsSearchFocused(true)}
-                   onChange={(e) => setSearchQuery(e.target.value)}
-                   placeholder={lang === 'bn' ? "কি খুঁজছেন? ফিচারের নাম লিখুন..." : "What are you looking for? Search features..."}
-                   className={`w-full pl-14 pr-12 py-3.5 bg-slate-50/50 border border-transparent rounded-2xl font-bold text-sm outline-none transition-all ${isSearchFocused ? 'bg-white border-blue-200 ring-4 ring-blue-500/5' : 'hover:bg-slate-100/50'}`}
-                 />
-                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-40 pointer-events-none">
-                    <Command size={14} />
-                    <span className="text-[10px] font-black">K</span>
-                 </div>
-               </div>
-
-               {isSearchFocused && (
-                 <div className="absolute top-full left-0 w-full mt-3 bg-white/95 backdrop-blur-3xl rounded-3xl border border-blue-50 shadow-2xl shadow-blue-500/10 p-2 overflow-hidden animate-in slide-in-from-top-2 duration-300 z-50">
-                    <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
-                      {filteredSearchItems.length > 0 ? filteredSearchItems.map((item) => (
-                        <button 
-                          key={item.id} 
-                          onClick={() => { setActiveTab(item.id); setIsSearchFocused(false); setSearchQuery(''); }}
-                          className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-blue-50 transition-all text-left group"
-                        >
-                          <div className={`p-2 rounded-xl transition-colors ${activeTab === item.id ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-blue-600 shadow-inner'}`}>
-                            {item.icon}
-                          </div>
-                          <div>
-                            <p className={`font-black text-sm ${activeTab === item.id ? 'text-blue-600' : 'text-slate-800'}`}>
-                              {lang === 'bn' ? item.label : item.id.toUpperCase()}
-                            </p>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 opacity-70">
-                              {lang === 'bn' ? 'সরাসরি যাওয়ার জন্য ক্লিক করুন' : 'Click to navigate'}
-                            </p>
-                          </div>
-                        </button>
-                      )) : (
-                        <div className="p-10 text-center">
-                           <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                              <Search className="text-slate-300" size={32} />
-                           </div>
-                           <p className="text-slate-400 font-bold text-xs uppercase tracking-widest leading-relaxed">
-                              {lang === 'bn' ? 'দুঃখিত, কোনো ফিচার খুঁজে পাওয়া যায়নি' : 'Sorry, no features found'}
-                           </p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="mt-2 p-4 bg-slate-50/50 rounded-2xl border-t border-slate-50 flex items-center justify-between">
-                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                         <Sparkles size={12} className="text-blue-500" /> কুইক টিপ: যেকোনো ফিচারের নাম লিখুন
-                       </p>
-                       <span className="text-[9px] font-black text-blue-500/40 uppercase tracking-widest">Joy Life Smart Search</span>
-                    </div>
-                 </div>
-               )}
+        <header className="sticky top-0 z-30 h-24 glass-card border-b px-8 flex items-center justify-between bg-white/50">
+          <div className="flex items-center gap-4 flex-1">
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden p-2 text-indigo-600"><Menu size={24}/></button>
+            <div className="hidden md:flex items-center gap-2 bg-slate-100/50 dark:bg-slate-800/50 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-700">
+               <Search size={16} className="text-slate-400" />
+               <input type="text" placeholder={lang === 'bn' ? "খুঁজুন..." : "Search..."} className="bg-transparent border-none outline-none text-xs font-bold w-40" />
+               <Command size={14} className="text-slate-300" />
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <button onClick={handleLangToggle} className={`flex items-center gap-3 px-6 py-3 rounded-2xl text-xs font-black border transition-all bg-blue-50 border-blue-100 text-blue-600`}>
-              <User size={16} /> <span>{lang === 'bn' ? 'EN' : 'BN'}</span>
+            <button onClick={toggleDarkMode} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl hover:scale-110 transition-all text-indigo-600">
+               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-
-            <div className={`hidden sm:flex items-center gap-4 pl-4 border-l transition-all border-blue-50`}>
-              <div className="hidden md:block text-right">
-                <p className={`text-sm font-black transition-colors text-slate-900`}>{userName}</p>
-                <p className={`text-[10px] font-black uppercase transition-colors text-blue-500/50`}>Active Now</p>
+            <button onClick={handleLangToggle} className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50">
+               {lang === 'bn' ? 'English' : 'বাংলা'}
+            </button>
+            <div className="flex items-center gap-3 pl-4 border-l border-slate-100">
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-black text-slate-900 leading-none">{userName}</p>
+                <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Active Now</p>
               </div>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg transition-all bg-blue-600`}>
-                <User size={24} />
+              <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg">
+                 {userName.charAt(0).toUpperCase()}
               </div>
             </div>
           </div>
         </header>
 
         <div className="flex-1 p-8 lg:p-12">
-          <div className="max-w-7xl mx-auto pb-24">
-            {(() => {
-              const props = { lang, userName, userId };
-              switch (activeTab) {
-                case 'dashboard': return <Dashboard {...props} />;
-                case 'health': return <LifestyleHealth {...props} />;
-                case 'worktimer': return <WorkTimer {...props} />;
-                case 'profwork': return <ProfessionalWork {...props} />;
-                case 'worklog': return <WorkLog {...props} />;
-                case 'stories': return <MotivationalStories lang={lang} onNavigate={setActiveTab} />;
-                case 'diary': return <Diary userId={userId} />;
-                case 'tasks': return <Tasks userId={userId} />;
-                case 'expenses': return <Expenses {...props} />;
-                case 'goals': return <Goals userId={userId} />;
-                case 'study': return <StudyPlanner userId={userId} />;
-                case 'notes': return <Notes userId={userId} />;
-                case 'memories': return <MemoryGallery userId={userId} />;
-                default: return <Dashboard {...props} />;
-              }
-            })()}
-          </div>
+           <div className="max-w-7xl mx-auto pb-20">
+              {(() => {
+                const props = { lang, userName, userId: userId || '' };
+                switch (activeTab) {
+                  case 'dashboard': return <Dashboard {...props} />;
+                  case 'essentials': return <DailyEssentials {...props} />;
+                  case 'education': return <EducationCareer {...props} />;
+                  case 'entertainment': return <EntertainmentHobbies {...props} />;
+                  case 'health': return <LifestyleHealth {...props} />;
+                  case 'worktimer': return <WorkTimer {...props} />;
+                  case 'profwork': return <ProfessionalWork {...props} />;
+                  case 'worklog': return <WorkLog {...props} />;
+                  case 'habits': return <HabitTracker userId={userId || ''} />;
+                  case 'stories': return <MotivationalStories lang={lang} onNavigate={setActiveTab} />;
+                  case 'diary': return <Diary userId={userId || ''} />;
+                  case 'tasks': return <Tasks userId={userId || ''} />;
+                  case 'expenses': return <Expenses {...props} />;
+                  case 'goals': return <Goals userId={userId || ''} />;
+                  case 'study': return <StudyPlanner userId={userId || ''} />;
+                  case 'notes': return <Notes userId={userId || ''} />;
+                  case 'memories': return <MemoryGallery userId={userId || ''} />;
+                  default: return <Dashboard {...props} />;
+                }
+              })()}
+           </div>
         </div>
+
+        {/* FOOTER */}
+        <footer className="mt-auto py-12 px-8 glass-card border-t border-slate-100 dark:border-slate-800">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+            <div className="col-span-1 md:col-span-2 space-y-6">
+               <div className="flex items-center gap-3">
+                 <div className="p-2.5 bg-indigo-600 rounded-xl text-white shadow-lg"><Sparkles size={20}/></div>
+                 <h3 className="text-2xl font-black tracking-tight text-slate-900">Joy Daily Life</h3>
+               </div>
+               <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm font-medium leading-relaxed">
+                 {lang === 'bn' 
+                   ? 'আপনার দৈনন্দিন জীবনকে সহজ, গতিশীল এবং আনন্দময় করতে আমরা বদ্ধপরিকর। উন্নত প্রযুক্তি এবং আর্টিফিশিয়াল ইন্টেলিজেন্সের সমন্বয়ে জয়লাইফ ওএস আপনার ব্যক্তিগত ডিজিটাল সহকারী।' 
+                   : 'We are committed to making your daily life simple, dynamic, and joyful. Combining advanced technology and AI, JoyLife OS is your personal digital assistant.'}
+               </p>
+               <div className="flex gap-4">
+                 {[Facebook, Instagram, Twitter, Github].map((Icon, i) => (
+                   <button key={i} className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 hover:text-indigo-600 hover:scale-110 transition-all">
+                     <Icon size={18} />
+                   </button>
+                 ))}
+               </div>
+            </div>
+            
+            <div className="space-y-6">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">রিসোর্সসমূহ</h4>
+              <ul className="space-y-3 text-sm font-bold text-slate-500 dark:text-slate-400">
+                {['ড্যাশবোর্ড', 'শিক্ষা ও ক্যারিয়ার', 'লাইফস্টাইল', 'মোটিভেশন'].map(l => (
+                  <li key={l} className="hover:text-indigo-600 cursor-pointer transition-colors">{l}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="space-y-6">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">যোগাযোগ</h4>
+              <ul className="space-y-3 text-sm font-bold text-slate-500 dark:text-slate-400">
+                <li className="flex items-center gap-2"><Mail size={16}/> hello@joylife.os</li>
+                <li className="flex items-center gap-2 italic">Made with <Heart size={14} className="text-rose-500 fill-rose-500" /> by Joy Kumar</li>
+              </ul>
+            </div>
+          </div>
+          <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between gap-4">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">© ২০২৫ জয়লাইফ ওএস। সর্বস্বত্ব সংরক্ষিত।</p>
+            <div className="flex gap-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+               <span className="cursor-pointer hover:text-indigo-600">প্রাইভেসি পলিসি</span>
+               <span className="cursor-pointer hover:text-indigo-600">টার্মস অব সার্ভিস</span>
+            </div>
+          </div>
+        </footer>
+
+        {/* AI Assistant */}
+        <FloatingAI lang={lang} userName={userName} />
       </main>
     </div>
   );

@@ -3,6 +3,7 @@
   "description": "A comprehensive personal life dashboard featuring a diary, task manager, expense tracker, habit tracker, and AI-powered insights for a better daily experience.",
   "requestFramePermissions": [
     "camera",
-    "microphone"
+    "microphone",
+    "geolocation"
   ]
 }
