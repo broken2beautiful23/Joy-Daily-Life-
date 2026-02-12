@@ -1,8 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Send, Sparkles, Mic, MicOff, Volume2, VolumeX, 
-  Bot, User, Zap, ArrowRight, Lightbulb, Wallet, Calendar, RotateCcw, Globe, RefreshCcw, Info
+  Send, Sparkles, Volume2, VolumeX, 
+  Bot, Zap, Globe, RefreshCcw, Info
 } from 'lucide-react';
 import { chatWithJoyStream, speakText, isApiKeyAvailable } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -25,19 +25,24 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const t = translations[lang];
 
-  const handleActivateJoy = () => {
+  const handleActivateJoy = async () => {
     const aiStudio = (window as any).aistudio;
     if (aiStudio) {
       setIsActivating(true);
-      // Trigger selection
-      aiStudio.openSelectKey();
-      // Assume success as per instructions
-      setHasKey(true);
-      setIsActivating(false);
-      setMessages([{ 
-        role: 'joy', 
-        text: lang === 'bn' ? "জয় এখন আপনার সেবায় সচল! আজ আমরা কী নিয়ে আলোচনা করব?" : "Joy is active and ready to help! What shall we discuss today?" 
-      }]);
+      try {
+        await aiStudio.openSelectKey();
+        setHasKey(true);
+        setMessages([{ 
+          role: 'joy', 
+          text: lang === 'bn' ? "জয় এখন আপনার সেবায় সচল! আজ আমরা কী নিয়ে আলোচনা করব?" : "Joy is active and ready to help! What shall we discuss today?" 
+        }]);
+      } catch (e) {
+        console.error("Coach activation failed", e);
+      } finally {
+        setIsActivating(false);
+      }
+    } else {
+      setHasKey(isApiKeyAvailable());
     }
   };
 
@@ -88,7 +93,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
           const newMsgs = [...prev];
           newMsgs[newMsgs.length - 1] = { 
             role: 'joy', 
-            text: lang === 'bn' ? "আপনার এপিআই কি কাজ করছে না। জয়কে সচল রাখতে দয়া করে আবার কানেক্ট করুন।" : "Your API key is not working. Please reconnect Joy to continue.",
+            text: lang === 'bn' ? "আপনার এপিআই কি কাজ করছে না। জয়কে পুনরায় কানেক্ট করুন।" : "Your API key is not working. Please reconnect Joy.",
             isError: true
           };
           return newMsgs;
@@ -109,7 +114,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
       if (isVoiceEnabled && fullResponse && success) {
         const base64Audio = await speakText(fullResponse);
         if (base64Audio) {
-           // Audio Context logic (same as FloatingAI)
+           // Audio Context logic
         }
       }
     }
@@ -134,7 +139,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                 onClick={handleActivateJoy} 
                 className="bg-yellow-400 text-blue-900 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-white hover:scale-105 transition-all flex items-center gap-3 animate-bounce"
               >
-                <Globe size={16} /> জয়কে কানেক্ট করুন
+                <Globe size={16} /> {isActivating ? 'প্রসেসিং...' : 'জয়কে সচল করুন'}
               </button>
             )}
           </div>
@@ -146,20 +151,17 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                    <Bot size={48} />
                 </div>
                 <div>
-                  <h3 className="text-3xl font-black text-slate-800 tracking-tighter">জয় আপনাকে সাহায্য করতে প্রস্তুত!</h3>
+                  <h3 className="text-3xl font-black text-slate-800 tracking-tighter">জয় সবাইকে সাহায্য করতে প্রস্তুত!</h3>
                   <p className="text-xs font-bold text-slate-400 leading-relaxed mt-4 uppercase tracking-widest">
-                    আপনার এপিআই কি ব্যবহার করে জয়কে সক্রিয় করুন এবং পার্সোনাল লাইফ কোচিং শুরু করুন।
+                    আপনার বন্ধুদের জন্য জয়কে সচল করতে নিচের বাটনে ক্লিক করুন। এটি সবার জন্য উন্মুক্ত।
                   </p>
                 </div>
                 <button 
                   onClick={handleActivateJoy}
                   className="w-full py-6 bg-blue-600 text-white rounded-[32px] font-black shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 text-lg"
                 >
-                  <Zap size={24} /> এখনই জয়কে সক্রিয় করুন
+                  <Zap size={24} /> {isActivating ? 'লোডিং...' : 'জয়কে আনলক করুন'}
                 </button>
-                <p className="text-[10px] font-black text-blue-400 opacity-60 flex items-center justify-center gap-2">
-                   <Info size={12} /> Billing enabled key required for full experience
-                </p>
               </div>
             )}
             
@@ -171,7 +173,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                   {msg.text || '...'}
                   {msg.isError && (
                     <button onClick={handleActivateJoy} className="mt-5 flex items-center gap-3 text-sm font-black text-blue-600 hover:text-blue-800 uppercase bg-blue-50 px-6 py-3 rounded-2xl shadow-inner transition-all">
-                      <RefreshCcw size={16} /> জয়কে পুনরায় কানেক্ট করুন
+                      <RefreshCcw size={16} /> পুনরায় কানেক্ট করুন
                     </button>
                   )}
                 </div>
@@ -189,7 +191,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                   type="text" 
                   value={input} 
                   onChange={(e) => setInput(e.target.value)} 
-                  placeholder={hasKey ? t.ask_joy : "আগে জয়কে সক্রিয় করুন..."} 
+                  placeholder={hasKey ? t.ask_joy : "প্রথমে জয়কে সচল করুন..."} 
                   className="w-full pl-8 pr-20 py-6 bg-slate-50 border-none rounded-[32px] focus:ring-4 focus:ring-blue-500/10 font-bold text-xl shadow-inner outline-none" 
                   disabled={isTyping}
                 />

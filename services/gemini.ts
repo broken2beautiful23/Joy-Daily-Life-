@@ -7,7 +7,7 @@ const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
 
 /**
- * Checks if the API key is currently available.
+ * Checks if the API key is currently available in the environment.
  */
 export const isApiKeyAvailable = () => {
   const key = process.env.API_KEY;
@@ -15,13 +15,13 @@ export const isApiKeyAvailable = () => {
 };
 
 /**
- * Chat stream with Joy. 
- * We create a new instance inside the function to ensure it picks up the latest key.
+ * Dynamic chat stream with Joy. 
+ * Creates a fresh instance on every call to ensure current context and key usage.
  */
 export async function* chatWithJoyStream(userMessage: string, userData: any) {
   const apiKey = process.env.API_KEY;
   
-  if (!apiKey) {
+  if (!apiKey || apiKey === "undefined") {
     throw new Error("KEY_MISSING");
   }
 
@@ -48,8 +48,9 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
       }
     }
   } catch (error: any) {
-    console.error("Gemini Error:", error);
-    if (error.message?.includes("entity was not found")) {
+    console.error("Gemini Connection Error:", error);
+    // Handle transient key errors gracefully
+    if (error.message?.includes("entity was not found") || error.message?.includes("API_KEY_INVALID")) {
       throw new Error("KEY_INVALID");
     }
     throw error;
@@ -57,11 +58,11 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
 }
 
 /**
- * Speak text function using Joy's voice.
+ * Text-to-speech for Joy's voice output.
  */
 export async function speakText(text: string): Promise<string | null> {
   const apiKey = process.env.API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey || apiKey === "undefined") return null;
 
   const ai = new GoogleGenAI({ apiKey });
   
@@ -81,7 +82,7 @@ export async function speakText(text: string): Promise<string | null> {
 
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
   } catch (error) {
-    console.error("Voice Error:", error);
+    console.error("Joy Voice Error:", error);
     return null;
   }
 }
