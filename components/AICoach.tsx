@@ -2,9 +2,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, Sparkles, Volume2, VolumeX, 
-  Bot, Zap, RefreshCw, AlertCircle
+  Bot, Zap, RefreshCw
 } from 'lucide-react';
-import { chatWithJoyStream, speakText } from '../services/gemini';
+import { chatWithGrokStream, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
 import { AI_AVATAR_URL } from '../constants';
 
@@ -15,7 +15,7 @@ interface AICoachProps {
 
 const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<{role: 'user' | 'joy', text: string, isError?: boolean}[]>([]);
+  const [messages, setMessages] = useState<{role: 'user' | 'grok', text: string}[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   
@@ -32,24 +32,11 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
   useEffect(() => {
     if (messages.length === 0) {
       const greeting = lang === 'bn' 
-        ? `নমস্কার ${userName}! আমি জয়। আজ কীভাবে আপনাকে সাহায্য করতে পারি?` 
-        : `Hello ${userName}! I am Joy. How can I help you today?`;
-      setMessages([{ role: 'joy', text: greeting }]);
+        ? `নমস্কার ${userName}! আমি গ্ৰোক। আজ আমি আপনাকে কীভাবে সাহায্য করতে পারি?` 
+        : `Hello ${userName}! I am Grok. How can I assist you today?`;
+      setMessages([{ role: 'grok', text: greeting }]);
     }
   }, [lang, userName, messages.length]);
-
-  const handleActivate = async () => {
-    const aistudio = (window as any).aistudio;
-    if (aistudio) {
-      try {
-        await aistudio.openSelectKey();
-        setMessages(prev => prev.filter(m => !m.isError));
-        setIsTyping(false);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  };
 
   const handleSendMessage = async (userMsg: string) => {
     if (!userMsg.trim() || isTyping) return;
@@ -57,47 +44,24 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
     setIsTyping(true);
-    setMessages(prev => [...prev, { role: 'joy', text: '' }]);
+    setMessages(prev => [...prev, { role: 'grok', text: '' }]);
     
     let fullResponse = '';
-    let hasError = false;
     try {
-      const stream = chatWithJoyStream(userMsg, { userName });
+      const stream = chatWithGrokStream(userMsg, { userName });
       for await (const chunk of stream) {
-        if (chunk.startsWith("এরর:") || chunk.startsWith("Error:")) {
-          fullResponse = chunk;
-          hasError = true;
-          break;
-        }
         fullResponse += chunk;
         setMessages(prev => {
           const newMsgs = [...prev];
-          newMsgs[newMsgs.length - 1] = { role: 'joy', text: fullResponse, isError: hasError };
-          return newMsgs;
-        });
-      }
-
-      if (hasError) {
-        setMessages(prev => {
-          const newMsgs = [...prev];
-          newMsgs[newMsgs.length - 1] = { role: 'joy', text: fullResponse, isError: true };
+          newMsgs[newMsgs.length - 1] = { role: 'grok', text: fullResponse };
           return newMsgs;
         });
       }
     } catch (err) {
       console.error(err);
-      setMessages(prev => {
-        const newMsgs = [...prev];
-        newMsgs[newMsgs.length - 1] = { 
-          role: 'joy', 
-          text: lang === 'bn' ? "দুঃখিত বন্ধু, জয়কে সক্রিয় করা প্রয়োজন।" : "Sorry friend, Joy needs to be activated.",
-          isError: true 
-        };
-        return newMsgs;
-      });
     } finally {
       setIsTyping(false);
-      if (isVoiceEnabled && fullResponse && !hasError) {
+      if (isVoiceEnabled && fullResponse) {
         const base64Audio = await speakText(fullResponse);
         if (base64Audio) {
            if (!audioContextRef.current) audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
@@ -122,10 +86,10 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     <div className="max-w-5xl mx-auto h-[calc(100vh-180px)] flex flex-col gap-6 animate-in fade-in duration-700">
       <div className="flex-1 flex flex-col lg:flex-row gap-8 overflow-hidden">
         <div className="flex-1 bg-white/70 backdrop-blur-2xl rounded-[48px] border border-blue-50 shadow-2xl flex flex-col overflow-hidden">
-          <div className="p-8 bg-blue-600 text-white flex items-center justify-between shadow-xl relative z-10">
+          <div className="p-8 bg-slate-900 text-white flex items-center justify-between shadow-xl relative z-10">
             <div className="flex items-center gap-5">
               <div className="w-14 h-14 rounded-3xl bg-white/20 p-1.5 shadow-inner">
-                <img src={AI_AVATAR_URL} alt="Joy" className="w-full h-full object-cover rounded-2xl" />
+                <img src={AI_AVATAR_URL} alt="Grok" className="w-full h-full object-cover rounded-2xl" />
               </div>
               <div>
                 <h3 className="font-black text-2xl tracking-tighter flex items-center gap-2">{t.ai_name} <Zap size={16} className="fill-yellow-300 text-yellow-300" /></h3>
@@ -143,23 +107,15 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
                 <div className={`p-6 rounded-[36px] text-lg font-bold shadow-md whitespace-pre-wrap leading-relaxed ${
-                  msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : msg.isError ? 'bg-rose-50 text-rose-600 border border-rose-100 rounded-tl-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
+                  msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                 }`}>
-                  {msg.text || (msg.role === 'joy' ? 'জয় উত্তর দিচ্ছে...' : '')}
-                  {msg.isError && (
-                    <button 
-                      onClick={handleActivate}
-                      className="mt-4 bg-blue-600 text-white px-8 py-3 rounded-2xl flex items-center gap-3 shadow-xl hover:scale-105 active:scale-95 transition-all text-xs font-black uppercase tracking-widest"
-                    >
-                      <Zap size={16} /> জয়কে সচল করুন
-                    </button>
-                  )}
+                  {msg.text || (msg.role === 'grok' ? 'গ্ৰোক টাইপ করছে...' : '')}
                 </div>
               </div>
             ))}
             {isTyping && messages[messages.length-1]?.text === '' && (
               <div className="p-6 text-slate-400 italic font-black text-xs uppercase tracking-widest animate-pulse flex items-center gap-2">
-                <RefreshCw size={14} className="animate-spin" /> জয় লিখছে...
+                <RefreshCw size={14} className="animate-spin" /> গ্ৰোক উত্তর জেনারেট করছে...
               </div>
             )}
           </div>
@@ -175,7 +131,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                   className="w-full pl-8 pr-20 py-6 bg-slate-50 border-none rounded-[32px] focus:ring-4 focus:ring-blue-500/10 font-bold text-xl shadow-inner outline-none" 
                   disabled={isTyping}
                 />
-                <button type="submit" disabled={!input.trim() || isTyping} className="absolute right-3 top-1/2 -translate-y-1/2 w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-xl hover:bg-blue-700 disabled:opacity-50 transition-all">
+                <button type="submit" disabled={!input.trim() || isTyping} className="absolute right-3 top-1/2 -translate-y-1/2 w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-xl hover:bg-black disabled:opacity-50 transition-all">
                   <Send size={24} />
                 </button>
               </form>

@@ -2,9 +2,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, X, Sparkles, 
-  Minimize2, Volume2, VolumeX, Zap, AlertCircle, RefreshCw
+  Minimize2, Volume2, VolumeX
 } from 'lucide-react';
-import { chatWithJoyStream, speakText } from '../services/gemini';
+import { chatWithGrokStream, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
 import { AI_AVATAR_URL } from '../constants';
 
@@ -16,7 +16,7 @@ interface FloatingAIProps {
 const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<{role: 'user' | 'joy', text: string, isError?: boolean}[]>([]);
+  const [messages, setMessages] = useState<{role: 'user' | 'grok', text: string}[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   
@@ -33,25 +33,11 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       const greeting = lang === 'bn' 
-        ? `নমস্কার ${userName}! আমি জয়। আজ কীভাবে আপনাকে সাহায্য করতে পারি?` 
-        : `Hello ${userName}! I am Joy. How can I help you today?`;
-      setMessages([{ role: 'joy', text: greeting }]);
+        ? `নমস্কার ${userName}! আমি গ্ৰোক। আজ আমি আপনাকে কীভাবে সাহায্য করতে পারি?` 
+        : `Hello ${userName}! I am Grok. How can I assist you today?`;
+      setMessages([{ role: 'grok', text: greeting }]);
     }
   }, [isOpen, userName, lang, messages.length]);
-
-  const handleActivate = async () => {
-    const aistudio = (window as any).aistudio;
-    if (aistudio) {
-      try {
-        await aistudio.openSelectKey();
-        // Force refresh state by clearing errors
-        setMessages(prev => prev.filter(m => !m.isError));
-        setIsTyping(false);
-      } catch (e) {
-        console.error("Activation failed", e);
-      }
-    }
-  };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -61,52 +47,26 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
     setIsTyping(true);
-    
-    // Add temporary placeholder for Joy
-    setMessages(prev => [...prev, { role: 'joy', text: '' }]);
+    setMessages(prev => [...prev, { role: 'grok', text: '' }]);
     
     let currentText = '';
-    let hasError = false;
-
     try {
-      const stream = chatWithJoyStream(userMsg, { userName });
+      const stream = chatWithGrokStream(userMsg, { userName });
       for await (const chunk of stream) {
-        if (chunk.startsWith("এরর:") || chunk.startsWith("Error:")) {
-          currentText = chunk;
-          hasError = true;
-          break;
-        }
         currentText += chunk;
         setMessages(prev => {
           const updated = [...prev];
           if (updated.length > 0) {
-            updated[updated.length - 1] = { role: 'joy', text: currentText, isError: hasError };
+            updated[updated.length - 1] = { role: 'grok', text: currentText };
           }
-          return updated;
-        });
-      }
-
-      if (hasError) {
-        setMessages(prev => {
-          const updated = [...prev];
-          updated[updated.length - 1] = { role: 'joy', text: currentText, isError: true };
           return updated;
         });
       }
     } catch (err) {
       console.error(err);
-      setMessages(prev => {
-        const updated = [...prev];
-        updated[updated.length - 1] = { 
-          role: 'joy', 
-          text: lang === 'bn' ? "কানেকশনে সমস্যা হচ্ছে। জয়কে রি-অ্যাক্টিভেট করুন।" : "Connection error. Re-activate Joy.",
-          isError: true 
-        };
-        return updated;
-      });
     } finally {
       setIsTyping(false);
-      if (isVoiceEnabled && currentText && !hasError) {
+      if (isVoiceEnabled && currentText) {
         playAudioResponse(currentText);
       }
     }
@@ -138,10 +98,10 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end">
       {isOpen && (
         <div className="mb-4 w-[350px] md:w-[420px] h-[650px] bg-white rounded-[40px] shadow-2xl border border-blue-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10">
-          <div className="p-6 bg-blue-600 text-white flex items-center justify-between">
+          <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl overflow-hidden shadow-inner">
-                <img src={AI_AVATAR_URL} alt="Joy" className="w-full h-full object-cover" />
+              <div className="w-12 h-12 bg-white/10 rounded-2xl overflow-hidden shadow-inner">
+                <img src={AI_AVATAR_URL} alt="Grok" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h4 className="font-black text-lg tracking-tight">{t.ai_name}</h4>
@@ -164,19 +124,9 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                 <div className={`p-5 rounded-[28px] max-w-[85%] text-sm font-bold shadow-sm leading-relaxed ${
                   msg.role === 'user' 
                     ? 'bg-blue-600 text-white rounded-tr-none' 
-                    : msg.isError 
-                      ? 'bg-rose-50 text-rose-600 border border-rose-100 rounded-tl-none' 
-                      : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
+                    : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                 }`}>
-                  {msg.text || (msg.role === 'joy' ? 'জয় লিখছে...' : '')}
-                  {msg.isError && (
-                    <button 
-                      onClick={handleActivate}
-                      className="mt-3 w-full py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg"
-                    >
-                      <Zap size={12} /> জয়কে সচল করুন
-                    </button>
-                  )}
+                  {msg.text || (msg.role === 'grok' ? 'গ্ৰোক টাইপ করছে...' : '')}
                 </div>
               </div>
             ))}
@@ -205,7 +155,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                 <button 
                   type="submit" 
                   disabled={!input.trim() || isTyping} 
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center disabled:opacity-50 hover:bg-blue-700 transition-colors shadow-lg"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center disabled:opacity-50 hover:bg-black transition-colors shadow-lg"
                 >
                   <Send size={22} />
                 </button>
@@ -219,7 +169,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         {!isOpen && (
           <div className="relative w-20 h-24 flex items-center justify-center transition-transform hover:scale-110 active:scale-95">
             <div className="absolute bottom-10 animate-balloon">
-              <div className="absolute left-0 bottom-8 w-14 h-16 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-3xl shadow-2xl border border-white/40 flex items-center justify-center">
+              <div className="absolute left-0 bottom-8 w-14 h-16 bg-gradient-to-tr from-slate-900 to-slate-700 rounded-3xl shadow-2xl border border-white/40 flex items-center justify-center">
                 <Sparkles size={20} className="text-white animate-pulse" />
               </div>
             </div>
