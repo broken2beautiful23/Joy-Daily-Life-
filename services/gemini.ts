@@ -7,23 +7,11 @@ const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
 
 /**
- * Checks if the API key is present and valid as a string.
- */
-export const checkApiKeyStatus = () => {
-  const key = process.env.API_KEY;
-  return !!key && key !== "undefined" && key.length > 5;
-};
-
-/**
- * Chat stream with Joy. 
+ * Chat stream with Joy.
+ * Uses the injected process.env.API_KEY directly for a seamless public experience.
  */
 export async function* chatWithJoyStream(userMessage: string, userData: any) {
   const apiKey = process.env.API_KEY;
-  
-  if (!apiKey || apiKey === "undefined") {
-    throw new Error("KEY_MISSING");
-  }
-
   const ai = new GoogleGenAI({ apiKey });
   
   try {
@@ -47,11 +35,8 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
       }
     }
   } catch (error: any) {
-    console.error("Gemini Error:", error);
-    if (error.message?.includes("entity was not found") || error.message?.includes("API_KEY_INVALID")) {
-      throw new Error("KEY_INVALID");
-    }
-    throw error;
+    console.error("Joy AI Error:", error);
+    yield "দুঃখিত বন্ধু, আমি এই মুহূর্তে উত্তর দিতে পারছি না। কারিগরি সমস্যার জন্য আমি লজ্জিত।";
   }
 }
 
@@ -60,8 +45,6 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
  */
 export async function speakText(text: string): Promise<string | null> {
   const apiKey = process.env.API_KEY;
-  if (!apiKey || apiKey === "undefined") return null;
-
   const ai = new GoogleGenAI({ apiKey });
   
   try {
@@ -80,7 +63,7 @@ export async function speakText(text: string): Promise<string | null> {
 
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
   } catch (error) {
-    console.error("Voice Error:", error);
+    console.error("Joy Voice Error:", error);
     return null;
   }
 }
