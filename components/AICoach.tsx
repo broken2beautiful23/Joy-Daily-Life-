@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, Sparkles, Volume2, VolumeX, 
-  Bot, Zap, RefreshCw
+  Bot, Zap, RefreshCw, AlertCircle
 } from 'lucide-react';
 import { chatWithJoyStream, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -15,7 +15,7 @@ interface AICoachProps {
 
 const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<{role: 'user' | 'joy', text: string}[]>([]);
+  const [messages, setMessages] = useState<{role: 'user' | 'joy', text: string, isError?: boolean}[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   
@@ -38,6 +38,19 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     }
   }, [lang, userName, messages.length]);
 
+  const handleActivate = async () => {
+    const aistudio = (window as any).aistudio;
+    if (aistudio) {
+      try {
+        await aistudio.openSelectKey();
+        setMessages(prev => prev.filter(m => !m.isError));
+        setIsTyping(false);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+
   const handleSendMessage = async (userMsg: string) => {
     if (!userMsg.trim() || isTyping) return;
 
@@ -47,23 +60,44 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
     setMessages(prev => [...prev, { role: 'joy', text: '' }]);
     
     let fullResponse = '';
-    let success = false;
+    let hasError = false;
     try {
       const stream = chatWithJoyStream(userMsg, { userName });
       for await (const chunk of stream) {
+        if (chunk.startsWith("এরর:") || chunk.startsWith("Error:")) {
+          fullResponse = chunk;
+          hasError = true;
+          break;
+        }
         fullResponse += chunk;
         setMessages(prev => {
           const newMsgs = [...prev];
-          newMsgs[newMsgs.length - 1] = { role: 'joy', text: fullResponse };
+          newMsgs[newMsgs.length - 1] = { role: 'joy', text: fullResponse, isError: hasError };
           return newMsgs;
         });
-        success = true;
+      }
+
+      if (hasError) {
+        setMessages(prev => {
+          const newMsgs = [...prev];
+          newMsgs[newMsgs.length - 1] = { role: 'joy', text: fullResponse, isError: true };
+          return newMsgs;
+        });
       }
     } catch (err) {
       console.error(err);
+      setMessages(prev => {
+        const newMsgs = [...prev];
+        newMsgs[newMsgs.length - 1] = { 
+          role: 'joy', 
+          text: lang === 'bn' ? "দুঃখিত বন্ধু, জয়কে সক্রিয় করা প্রয়োজন।" : "Sorry friend, Joy needs to be activated.",
+          isError: true 
+        };
+        return newMsgs;
+      });
     } finally {
       setIsTyping(false);
-      if (isVoiceEnabled && fullResponse && success) {
+      if (isVoiceEnabled && fullResponse && !hasError) {
         const base64Audio = await speakText(fullResponse);
         if (base64Audio) {
            if (!audioContextRef.current) audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
@@ -109,9 +143,17 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
                 <div className={`p-6 rounded-[36px] text-lg font-bold shadow-md whitespace-pre-wrap leading-relaxed ${
-                  msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
+                  msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : msg.isError ? 'bg-rose-50 text-rose-600 border border-rose-100 rounded-tl-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                 }`}>
                   {msg.text || (msg.role === 'joy' ? 'জয় উত্তর দিচ্ছে...' : '')}
+                  {msg.isError && (
+                    <button 
+                      onClick={handleActivate}
+                      className="mt-4 bg-blue-600 text-white px-8 py-3 rounded-2xl flex items-center gap-3 shadow-xl hover:scale-105 active:scale-95 transition-all text-xs font-black uppercase tracking-widest"
+                    >
+                      <Zap size={16} /> জয়কে সচল করুন
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

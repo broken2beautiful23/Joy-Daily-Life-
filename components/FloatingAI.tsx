@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, X, Sparkles, 
-  Minimize2, Volume2, VolumeX
+  Minimize2, Volume2, VolumeX, Zap, AlertCircle, RefreshCw
 } from 'lucide-react';
 import { chatWithJoyStream, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -16,7 +16,7 @@ interface FloatingAIProps {
 const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<{role: 'user' | 'joy', text: string}[]>([]);
+  const [messages, setMessages] = useState<{role: 'user' | 'joy', text: string, isError?: boolean}[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   
@@ -39,6 +39,20 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     }
   }, [isOpen, userName, lang, messages.length]);
 
+  const handleActivate = async () => {
+    const aistudio = (window as any).aistudio;
+    if (aistudio) {
+      try {
+        await aistudio.openSelectKey();
+        // Force refresh state by clearing errors
+        setMessages(prev => prev.filter(m => !m.isError));
+        setIsTyping(false);
+      } catch (e) {
+        console.error("Activation failed", e);
+      }
+    }
+  };
+
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const userMsg = input.trim();
@@ -47,29 +61,52 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
     setIsTyping(true);
+    
+    // Add temporary placeholder for Joy
     setMessages(prev => [...prev, { role: 'joy', text: '' }]);
     
     let currentText = '';
-    let success = false;
+    let hasError = false;
 
     try {
       const stream = chatWithJoyStream(userMsg, { userName });
       for await (const chunk of stream) {
+        if (chunk.startsWith("এরর:") || chunk.startsWith("Error:")) {
+          currentText = chunk;
+          hasError = true;
+          break;
+        }
         currentText += chunk;
         setMessages(prev => {
           const updated = [...prev];
           if (updated.length > 0) {
-            updated[updated.length - 1] = { role: 'joy', text: currentText };
+            updated[updated.length - 1] = { role: 'joy', text: currentText, isError: hasError };
           }
           return updated;
         });
-        success = true;
+      }
+
+      if (hasError) {
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: 'joy', text: currentText, isError: true };
+          return updated;
+        });
       }
     } catch (err) {
       console.error(err);
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { 
+          role: 'joy', 
+          text: lang === 'bn' ? "কানেকশনে সমস্যা হচ্ছে। জয়কে রি-অ্যাক্টিভেট করুন।" : "Connection error. Re-activate Joy.",
+          isError: true 
+        };
+        return updated;
+      });
     } finally {
       setIsTyping(false);
-      if (isVoiceEnabled && currentText && success) {
+      if (isVoiceEnabled && currentText && !hasError) {
         playAudioResponse(currentText);
       }
     }
@@ -127,9 +164,19 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                 <div className={`p-5 rounded-[28px] max-w-[85%] text-sm font-bold shadow-sm leading-relaxed ${
                   msg.role === 'user' 
                     ? 'bg-blue-600 text-white rounded-tr-none' 
-                    : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
+                    : msg.isError 
+                      ? 'bg-rose-50 text-rose-600 border border-rose-100 rounded-tl-none' 
+                      : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                 }`}>
                   {msg.text || (msg.role === 'joy' ? 'জয় লিখছে...' : '')}
+                  {msg.isError && (
+                    <button 
+                      onClick={handleActivate}
+                      className="mt-3 w-full py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg"
+                    >
+                      <Zap size={12} /> জয়কে সচল করুন
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
