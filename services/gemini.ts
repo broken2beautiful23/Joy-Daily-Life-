@@ -7,7 +7,7 @@ const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
 
 /**
- * Checks if the API key exists in the environment.
+ * Checks if the API key is currently available.
  */
 export const isApiKeyAvailable = () => {
   const key = process.env.API_KEY;
@@ -15,13 +15,13 @@ export const isApiKeyAvailable = () => {
 };
 
 /**
- * Main chat stream logic with Joy.
- * Fresh instance for every call to catch the latest API key from session.
+ * Chat stream with Joy. 
+ * We create a new instance inside the function to ensure it picks up the latest key.
  */
 export async function* chatWithJoyStream(userMessage: string, userData: any) {
   const apiKey = process.env.API_KEY;
   
-  if (!apiKey || apiKey === "undefined") {
+  if (!apiKey) {
     throw new Error("KEY_MISSING");
   }
 
@@ -48,21 +48,20 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
       }
     }
   } catch (error: any) {
-    // If key is revoked or project not found
-    if (error.message?.includes("Requested entity was not found") || error.message?.includes("API_KEY_INVALID")) {
+    console.error("Gemini Error:", error);
+    if (error.message?.includes("entity was not found")) {
       throw new Error("KEY_INVALID");
     }
-    console.error("Joy Connection Error:", error);
     throw error;
   }
 }
 
 /**
- * Joy's voice output logic.
+ * Speak text function using Joy's voice.
  */
 export async function speakText(text: string): Promise<string | null> {
   const apiKey = process.env.API_KEY;
-  if (!apiKey || apiKey === "undefined") return null;
+  if (!apiKey) return null;
 
   const ai = new GoogleGenAI({ apiKey });
   
@@ -81,8 +80,8 @@ export async function speakText(text: string): Promise<string | null> {
     });
 
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
-  } catch (error: any) {
-    console.error("Joy Voice Sync Error:", error);
+  } catch (error) {
+    console.error("Voice Error:", error);
     return null;
   }
 }
