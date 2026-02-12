@@ -7,7 +7,7 @@ const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
 
 /**
- * Checks if the API key is valid.
+ * Checks if the API key exists in the environment.
  */
 export const isApiKeyAvailable = () => {
   const key = process.env.API_KEY;
@@ -15,7 +15,8 @@ export const isApiKeyAvailable = () => {
 };
 
 /**
- * Chat with Joy using a fresh AI instance to ensure the latest key is used.
+ * Main chat stream logic with Joy.
+ * Fresh instance for every call to catch the latest API key from session.
  */
 export async function* chatWithJoyStream(userMessage: string, userData: any) {
   const apiKey = process.env.API_KEY;
@@ -24,7 +25,6 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
     throw new Error("KEY_MISSING");
   }
 
-  // Create instance right before call for reliability
   const ai = new GoogleGenAI({ apiKey });
   
   try {
@@ -48,16 +48,17 @@ export async function* chatWithJoyStream(userMessage: string, userData: any) {
       }
     }
   } catch (error: any) {
-    if (error.message?.includes("Requested entity was not found")) {
+    // If key is revoked or project not found
+    if (error.message?.includes("Requested entity was not found") || error.message?.includes("API_KEY_INVALID")) {
       throw new Error("KEY_INVALID");
     }
-    console.error("Joy AI connection error:", error);
+    console.error("Joy Connection Error:", error);
     throw error;
   }
 }
 
 /**
- * Voice output for Joy.
+ * Joy's voice output logic.
  */
 export async function speakText(text: string): Promise<string | null> {
   const apiKey = process.env.API_KEY;
@@ -81,7 +82,7 @@ export async function speakText(text: string): Promise<string | null> {
 
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
   } catch (error: any) {
-    console.error("Voice synthesis failed", error);
+    console.error("Joy Voice Sync Error:", error);
     return null;
   }
 }

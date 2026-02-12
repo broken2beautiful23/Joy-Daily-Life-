@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, X, Sparkles, 
-  Minimize2, Volume2, VolumeX, Mic, MicOff, RotateCcw, Zap, Globe, RefreshCcw
+  Minimize2, Volume2, VolumeX, Mic, MicOff, RotateCcw, Zap, Globe, RefreshCcw, Info
 } from 'lucide-react';
 import { chatWithJoyStream, speakText, isApiKeyAvailable } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -19,7 +19,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   const [messages, setMessages] = useState<{role: 'user' | 'joy', text: string, isError?: boolean}[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
-  const [isListening, setIsListening] = useState(false);
   const [hasKey, setHasKey] = useState(isApiKeyAvailable());
   const [isActivating, setIsActivating] = useState(false);
   
@@ -27,24 +26,21 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const t = translations[lang];
 
-  const handleActivateJoy = async () => {
+  // Helper to open AI Studio key selector
+  const handleActivateJoy = () => {
     const aiStudio = (window as any).aistudio;
     if (aiStudio) {
       setIsActivating(true);
-      try {
-        // Platform Instruction: Trigger dialog and proceed assuming success
-        await aiStudio.openSelectKey();
-        setHasKey(true);
-        // Instant feedback for user
-        const successMsg = lang === 'bn' ? "জয় এখন আপনার সাথে আছে! কথা শুরু করুন।" : "Joy is now with you! Start chatting.";
-        setMessages([{ role: 'joy', text: successMsg }]);
-      } catch (e) {
-        console.error("Activation error", e);
-      } finally {
-        setIsActivating(false);
-      }
-    } else {
-      setHasKey(isApiKeyAvailable());
+      // Trigger dialog
+      aiStudio.openSelectKey();
+      // Per instructions: Assume success immediately to avoid race condition
+      setHasKey(true);
+      setIsActivating(false);
+      
+      const welcomeMsg = lang === 'bn' 
+        ? "জয় এখন আপনার সাথে আছে! আমি আপনার কথা শোনার জন্য প্রস্তুত।" 
+        : "Joy is now with you! I am ready to listen.";
+      setMessages([{ role: 'joy', text: welcomeMsg }]);
     }
   };
 
@@ -97,17 +93,26 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     } catch (err: any) {
       if (err.message === "KEY_MISSING" || err.message === "KEY_INVALID") {
         setHasKey(false);
-        handleActivateJoy(); // Force re-activation on error
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { 
+            role: 'joy', 
+            text: lang === 'bn' ? "দুঃখিত বন্ধু, এপিআই কি-তে সমস্যা হয়েছে। জয়কে আবার কানেক্ট করুন।" : "Sorry friend, API key issue. Please re-connect Joy.",
+            isError: true
+          };
+          return updated;
+        });
+      } else {
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { 
+            role: 'joy', 
+            text: lang === 'bn' ? "সংযোগ বিচ্ছিন্ন হয়েছে। আবার চেষ্টা করুন।" : "Connection lost. Try again.",
+            isError: true
+          };
+          return updated;
+        });
       }
-      setMessages(prev => {
-        const updated = [...prev];
-        updated[updated.length - 1] = { 
-          role: 'joy', 
-          text: lang === 'bn' ? "দুঃখিত বন্ধু, আমি সংযোগ করতে পারছি না। দয়া করে আবার কানেক্ট করুন।" : "Sorry friend, connection failed. Please re-connect.",
-          isError: true
-        };
-        return updated;
-      });
     } finally {
       setIsTyping(false);
       if (isVoiceEnabled && currentText && success) {
@@ -164,50 +169,52 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50/50 custom-scrollbar">
             {!hasKey && (
-              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-10 rounded-[32px] border border-blue-100 text-center space-y-6 animate-in fade-in duration-500">
+              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-10 rounded-[44px] border border-blue-100 text-center space-y-6 animate-in fade-in duration-500 shadow-xl">
                 <div className="w-20 h-20 bg-blue-600 text-white rounded-3xl flex items-center justify-center mx-auto shadow-xl ring-8 ring-blue-50">
-                  {isActivating ? <RefreshCcw size={32} className="animate-spin" /> : <Zap size={32} />}
+                   <Zap size={32} />
                 </div>
                 <div>
-                  <h4 className="font-black text-slate-800 text-lg">জয়কে সক্রিয় করুন</h4>
-                  <p className="text-xs font-bold text-slate-500 leading-relaxed mt-2">
-                    নিচের বাটনে ক্লিক করে জয়ের সাথে যুক্ত হোন। এটি অন্য সব ডিভাইসেও কাজ করবে।
+                  <h4 className="font-black text-slate-800 text-xl tracking-tight">জয়কে চালু করুন</h4>
+                  <p className="text-[11px] font-bold text-slate-400 leading-relaxed mt-2 uppercase tracking-widest">
+                    আপনার বন্ধুদের জন্য বা অন্য ডিভাইসে ব্যবহারের জন্য একবার কানেক্ট করে নিন।
                   </p>
                 </div>
                 <button 
                   onClick={handleActivateJoy}
-                  disabled={isActivating}
-                  className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                  className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black text-xs uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
                 >
-                  <Globe size={18} /> {isActivating ? 'লোডিং...' : 'এখনই কানেক্ট করুন'}
+                  <Globe size={18} /> কানেক্ট করুন
                 </button>
+                <div className="pt-2 flex items-center justify-center gap-2 text-[9px] font-black text-blue-400 uppercase tracking-widest">
+                   <Info size={12} /> এপিআই কি প্রয়োজন (ai.google.dev)
+                </div>
               </div>
             )}
 
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
-                <div className={`p-4 rounded-[24px] max-w-[85%] text-sm font-bold shadow-sm leading-relaxed ${
+                <div className={`p-5 rounded-[28px] max-w-[85%] text-sm font-bold shadow-sm leading-relaxed ${
                   msg.role === 'user' 
-                    ? 'bg-orange-500 text-white rounded-tr-none' 
+                    ? 'bg-blue-600 text-white rounded-tr-none' 
                     : msg.isError 
                       ? 'bg-rose-50 text-rose-600 border border-rose-100 rounded-tl-none'
                       : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                 }`}>
                   {msg.text || (msg.role === 'joy' ? 'জয় উত্তর দিচ্ছে...' : '')}
                   {msg.isError && (
-                    <button onClick={handleActivateJoy} className="mt-3 flex items-center gap-2 text-[10px] font-black uppercase text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg">
-                      <Zap size={10} /> আবার কানেক্ট করুন
+                    <button onClick={handleActivateJoy} className="mt-4 flex items-center gap-2 text-[10px] font-black uppercase text-blue-600 hover:text-blue-800 bg-blue-50 px-4 py-2 rounded-xl shadow-inner transition-all active:scale-95">
+                      <RefreshCcw size={12} /> পুনরায় কানেক্ট করুন
                     </button>
                   )}
                 </div>
               </div>
             ))}
             {isTyping && messages[messages.length-1]?.text === '' && (
-              <div className="flex justify-start">
-                <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-100 flex gap-1 shadow-sm">
-                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></div>
-                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+              <div className="flex justify-start animate-in fade-in">
+                <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-100 flex gap-1.5 shadow-sm">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
                 </div>
               </div>
             )}
@@ -220,16 +227,16 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                   type="text" 
                   value={input} 
                   onChange={(e) => setInput(e.target.value)} 
-                  placeholder={hasKey ? t.ask_joy : "প্রথমে কানেক্ট করুন..."} 
-                  className="w-full pl-6 pr-14 py-4 bg-slate-100 rounded-[20px] font-bold outline-none border-2 border-transparent focus:border-blue-500/10 focus:bg-white transition-all shadow-inner" 
-                  disabled={isTyping || !hasKey}
+                  placeholder={hasKey ? t.ask_joy : "প্রথমে জয়কে সক্রিয় করুন..."} 
+                  className="w-full pl-6 pr-14 py-5 bg-slate-100 rounded-[24px] font-bold outline-none border-2 border-transparent focus:border-blue-500/10 focus:bg-white transition-all shadow-inner" 
+                  disabled={isTyping}
                 />
                 <button 
                   type="submit" 
-                  disabled={!input.trim() || isTyping || !hasKey} 
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-11 bg-orange-400 text-white rounded-xl flex items-center justify-center disabled:opacity-50 hover:bg-orange-500 transition-colors shadow-sm"
+                  disabled={!input.trim() || isTyping} 
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center disabled:opacity-50 hover:bg-blue-700 transition-colors shadow-lg"
                 >
-                  <Send size={20} />
+                  <Send size={22} />
                 </button>
               </form>
             </div>
@@ -241,8 +248,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         {!isOpen && (
           <div className="relative w-20 h-24 flex items-center justify-center transition-transform hover:scale-110 active:scale-95">
             <div className="absolute bottom-10 animate-balloon">
-              <div className="absolute left-0 bottom-8 w-12 h-14 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-full shadow-xl border border-white/30 flex items-center justify-center">
-                <Sparkles size={16} className="text-white animate-pulse" />
+              <div className="absolute left-0 bottom-8 w-14 h-16 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-3xl shadow-2xl border border-white/40 flex items-center justify-center">
+                <Sparkles size={20} className="text-white animate-pulse" />
               </div>
             </div>
           </div>
