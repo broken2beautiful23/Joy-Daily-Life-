@@ -1,7 +1,7 @@
 
 export const translations = {
   bn: {
-    app_name: "জয়লাইফ",
+    app_name: "জয় কুমার বিশ্বাস",
     personal_os: "পার্সোনাল ওএস",
     sign_out: "লগ আউট",
     edit_profile: "প্রোফাইল এডিট",
@@ -89,10 +89,16 @@ export const translations = {
     quick_health_log: "আজকের হেলথ লগ",
     meditation: "মেডিটেশন",
     hydration: "পানি পান",
-    water_target: "লিটার লক্ষ্য"
+    water_target: "লিটার লক্ষ্য",
+    continue_as_guest: "গেস্ট হিসেবে প্রবেশ করুন",
+    guest_mode_active: "আপনি এখন গেস্ট মোডে আছেন",
+    signup_to_save: "ডাটা স্থায়ীভাবে সেভ করতে লগইন করুন",
+    ai_name: "জয় কুমার বিশ্বাস",
+    ai_role: "এআই অ্যাসিস্ট্যান্ট",
+    ask_joy: "কিছু জিজ্ঞেস করুন..."
   },
   en: {
-    app_name: "JoyLife",
+    app_name: "Joy Kumar Biswas",
     personal_os: "Personal OS",
     sign_out: "Sign Out",
     edit_profile: "Edit Profile",
@@ -180,7 +186,13 @@ export const translations = {
     quick_health_log: "Quick Health Log",
     meditation: "Meditation",
     hydration: "Hydration",
-    water_target: "Liters Target"
+    water_target: "Liters Target",
+    continue_as_guest: "Continue as Guest",
+    guest_mode_active: "You are in Guest Mode",
+    signup_to_save: "Login to save data permanently",
+    ai_name: "Joy Kumar Biswas",
+    ai_role: "AI Assistant",
+    ask_joy: "Ask anything..."
   }
 };
 

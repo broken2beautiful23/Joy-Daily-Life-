@@ -1,13 +1,13 @@
 
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const GROK_SYSTEM_PROMPT = "আপনার নাম গ্ৰোক (Grok)। আপনি একজন অত্যন্ত বুদ্ধিমান, আধুনিক এবং বন্ধুসুলভ এআই অ্যাসিস্ট্যান্ট। আপনার মূল লক্ষ্য ব্যবহারকারীকে সব ধরণের তথ্য দিয়ে সাহায্য করা এবং মোটিভেট করা। সবসময় শুদ্ধ এবং সুন্দর বাংলায় কথা বলুন। আপনার উত্তর হবে টু-দ্য-পয়েন্ট, দ্রুত এবং আকর্ষণীয়।";
+const GROK_SYSTEM_PROMPT = "আপনার নাম জয় কুমার বিশ্বাস। আপনি একজন অত্যন্ত বুদ্ধিমান, আধুনিক এবং বন্ধুসুলভ এআই অ্যাসিস্ট্যান্ট। আপনার মূল লক্ষ্য ব্যবহারকারীকে সব ধরণের তথ্য দিয়ে সাহায্য করা এবং মোটিভেট করা। সবসময় শুদ্ধ এবং সুন্দর বাংলায় কথা বলুন। আপনার উত্তর হবে টু-দ্য-পয়েন্ট, দ্রুত এবং আকর্ষণীয়।";
 
 const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
 
 /**
- * Direct stream with Grok.
+ * Direct stream with Joy Kumar Biswas AI.
  */
 export async function* chatWithGrokStream(userMessage: string, userData: any) {
   const apiKey = process.env.API_KEY || '';
@@ -39,13 +39,13 @@ export async function* chatWithGrokStream(userMessage: string, userData: any) {
       }
     }
   } catch (error: any) {
-    console.error("Grok Error:", error);
+    console.error("AI Error:", error);
     yield "দুঃখিত বন্ধু, আমি এই মুহূর্তে উত্তর দিতে পারছি না। কারিগরি সমস্যার জন্য আমি লজ্জিত। দয়া করে কিছুক্ষণ পর আবার চেষ্টা করুন।";
   }
 }
 
 /**
- * Text-to-speech for Grok.
+ * Text-to-speech for AI.
  */
 export async function speakText(text: string): Promise<string | null> {
   const apiKey = process.env.API_KEY || '';
@@ -69,7 +69,7 @@ export async function speakText(text: string): Promise<string | null> {
 
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
   } catch (error) {
-    console.error("Grok Voice Error:", error);
+    console.error("AI Voice Error:", error);
     return null;
   }
 }

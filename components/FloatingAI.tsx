@@ -11,9 +11,11 @@ import { AI_AVATAR_URL } from '../constants';
 interface FloatingAIProps {
   lang: Language;
   userName: string;
+  forceOpen?: boolean;
+  setForceOpen?: (val: boolean) => void;
 }
 
-const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
+const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName, forceOpen, setForceOpen }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{role: 'user' | 'grok', text: string}[]>([]);
@@ -23,6 +25,13 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const t = translations[lang];
+
+  useEffect(() => {
+    if (forceOpen) {
+      setIsOpen(true);
+      if (setForceOpen) setForceOpen(false);
+    }
+  }, [forceOpen, setForceOpen]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -94,34 +103,39 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
     } catch (err) { console.error(err); }
   };
 
+  const handleClose = () => {
+    setIsOpen(false);
+    if (setForceOpen) setForceOpen(false);
+  };
+
   return (
-    <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end pointer-events-none">
       {isOpen && (
-        <div className="mb-4 w-[350px] md:w-[420px] h-[650px] bg-white rounded-[40px] shadow-2xl border border-blue-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10">
+        <div className="mb-4 w-[calc(100vw-48px)] sm:w-[380px] md:w-[420px] h-[550px] sm:h-[650px] bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl border border-blue-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 pointer-events-auto">
           <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white/10 rounded-2xl overflow-hidden shadow-inner">
+              <div className="w-12 h-12 bg-white/10 rounded-2xl overflow-hidden shadow-inner shrink-0">
                 <img src={AI_AVATAR_URL} alt="Grok" className="w-full h-full object-cover" />
               </div>
-              <div>
-                <h4 className="font-black text-lg tracking-tight">{t.ai_name}</h4>
-                <p className="text-[10px] uppercase font-black opacity-70 tracking-widest">{t.ai_role}</p>
+              <div className="min-w-0">
+                <h4 className="font-black text-lg tracking-tight truncate">{t.ai_name}</h4>
+                <p className="text-[10px] uppercase font-black opacity-70 tracking-widest truncate">{t.ai_role}</p>
               </div>
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-1 shrink-0">
               <button onClick={() => setIsVoiceEnabled(!isVoiceEnabled)} className={`p-2 rounded-xl transition-all ${isVoiceEnabled ? 'bg-white/20' : 'opacity-40'}`}>
                 {isVoiceEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
               </button>
-              <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-xl">
+              <button onClick={handleClose} className="p-2 hover:bg-white/10 rounded-xl">
                 <Minimize2 size={18} />
               </button>
             </div>
           </div>
 
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50/50 custom-scrollbar">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-slate-50/50 custom-scrollbar">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
-                <div className={`p-5 rounded-[28px] max-w-[85%] text-sm font-bold shadow-sm leading-relaxed ${
+                <div className={`p-4 sm:p-5 rounded-[24px] sm:rounded-[28px] max-w-[90%] sm:max-w-[85%] text-sm font-bold shadow-sm leading-relaxed ${
                   msg.role === 'user' 
                     ? 'bg-blue-600 text-white rounded-tr-none' 
                     : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
@@ -141,7 +155,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
             )}
           </div>
 
-          <div className="p-6 bg-white border-t border-slate-50">
+          <div className="p-4 sm:p-6 bg-white border-t border-slate-50">
             <div className="flex gap-3">
               <form onSubmit={handleSendMessage} className="relative flex-1">
                 <input 
@@ -149,15 +163,15 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
                   value={input} 
                   onChange={(e) => setInput(e.target.value)} 
                   placeholder={t.ask_joy} 
-                  className="w-full pl-6 pr-14 py-5 bg-slate-100 rounded-[24px] font-bold outline-none border-2 border-transparent focus:border-blue-500/10 focus:bg-white transition-all shadow-inner" 
+                  className="w-full pl-6 pr-14 py-4 sm:py-5 bg-slate-100 rounded-[20px] sm:rounded-[24px] font-bold outline-none border-2 border-transparent focus:border-blue-500/10 focus:bg-white transition-all shadow-inner" 
                   disabled={isTyping}
                 />
                 <button 
                   type="submit" 
                   disabled={!input.trim() || isTyping} 
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center disabled:opacity-50 hover:bg-black transition-colors shadow-lg"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-slate-900 text-white rounded-xl sm:rounded-2xl flex items-center justify-center disabled:opacity-50 hover:bg-black transition-colors shadow-lg"
                 >
-                  <Send size={22} />
+                  <Send size={20} />
                 </button>
               </form>
             </div>
@@ -165,14 +179,10 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName }) => {
         </div>
       )}
 
-      <div className="relative cursor-pointer group" onClick={() => setIsOpen(!isOpen)}>
+      <div className="relative pointer-events-auto cursor-pointer group" onClick={() => setIsOpen(!isOpen)}>
         {!isOpen && (
-          <div className="relative w-20 h-24 flex items-center justify-center transition-transform hover:scale-110 active:scale-95">
-            <div className="absolute bottom-10 animate-balloon">
-              <div className="absolute left-0 bottom-8 w-14 h-16 bg-gradient-to-tr from-slate-900 to-slate-700 rounded-3xl shadow-2xl border border-white/40 flex items-center justify-center">
-                <Sparkles size={20} className="text-white animate-pulse" />
-              </div>
-            </div>
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 rounded-[24px] sm:rounded-[30px] flex items-center justify-center shadow-2xl border border-white/10 hover:scale-110 active:scale-95 transition-all">
+            <Sparkles size={28} className="text-yellow-400 animate-pulse" />
           </div>
         )}
         {isOpen && (
