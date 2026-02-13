@@ -1,7 +1,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// System instructions for the AI to act as a platform guide
+// এআই-এর জন্য সিস্টেম ইনস্ট্রাকশন
 const GROK_SYSTEM_PROMPT = `আপনার নাম জয় কুমার বিশ্বাস। আপনি Joy Daily Life (Joy OS) প্ল্যাটফর্মের স্মার্ট এআই গাইড। 
 
 আপনার মূল দায়িত্ব:
@@ -13,7 +13,7 @@ const GROK_SYSTEM_PROMPT = `আপনার নাম জয় কুমার ব
 - সবসময় শুদ্ধ এবং সহজ বাংলায় কথা বলুন।
 - ব্যবহারকারীর সাথে বন্ধুর মতো আচরণ করুন।
 - উত্তরগুলো হবে টু-দ্য-পয়েন্ট এবং আকর্ষণীয়।
-- আপনি শুধুমাত্র টেক্সটের মাধ্যমে সাহায্য করবেন (কোনো অডিও বা ভয়েস নেই)।
+- আপনি শুধুমাত্র টেক্সটের মাধ্যমে সাহায্য করবেন।
 
 লিমিটেশন:
 - যদি কোনো টেকনিক্যাল সমস্যা হয়, ব্যবহারকারীকে ইমেইল (joybiswas01672@gmail.com) করতে বলুন।`;
@@ -24,17 +24,10 @@ const PRIMARY_MODEL = 'gemini-3-flash-preview';
  * Direct stream with Joy Kumar Biswas AI using the internal API Key.
  */
 export async function* chatWithGrokStream(userMessage: string, userData: any) {
-  // Use the API key provided by the environment automatically
-  const apiKey = process.env.API_KEY;
-  
-  if (!apiKey) {
-    yield "সিস্টেম কনফিগারেশনে সমস্যা হয়েছে। দয়া করে এডমিনের সাথে যোগাযোগ করুন।";
-    return;
-  }
-  
-  const ai = new GoogleGenAI({ apiKey });
-  
   try {
+    // সরাসরি এপিআই কী ব্যবহার করে নতুন ইনস্ট্যান্স তৈরি
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     const responseStream = await ai.models.generateContentStream({
       model: PRIMARY_MODEL,
       contents: [{
@@ -58,6 +51,11 @@ export async function* chatWithGrokStream(userMessage: string, userData: any) {
     }
   } catch (error: any) {
     console.error("Gemini AI Error:", error);
-    yield "দুঃখিত বন্ধু, সংযোগ বিচ্ছিন্ন হয়েছে। দয়া করে আপনার ইন্টারনেট চেক করুন অথবা কিছুক্ষণ পর চেষ্টা করুন।";
+    // যদি এপিআই কী না থাকে বা কোনো সমস্যা হয়, তবে সুন্দর করে একটি এরর মেসেজ দিন
+    if (error.message && error.message.includes("API key")) {
+      yield "দুঃখিত বন্ধু, এপিআই কী সেটআপে সমস্যা হচ্ছে। দয়া করে এডমিনের সাথে যোগাযোগ করুন।";
+    } else {
+      yield "দুঃখিত বন্ধু, আমি এই মুহূর্তে সংযোগ করতে পারছি না। দয়া করে কিছুক্ষণ পর আবার চেষ্টা করুন।";
+    }
   }
 }
