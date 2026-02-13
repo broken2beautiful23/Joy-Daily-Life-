@@ -17,10 +17,9 @@ interface DashboardProps {
   userName: string;
   userId: string;
   onNavigate: (tab: string) => void;
-  onOpenAi: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigate, onOpenAi }) => {
+const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigate }) => {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -109,12 +108,6 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
               className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg flex items-center gap-2"
              >
                নতুন কাজ যোগ করুন <ArrowRight size={16} />
-             </button>
-             <button 
-              onClick={onOpenAi}
-              className="bg-white/10 border border-white/10 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-white/20"
-             >
-               এআই অ্যাসিস্ট্যান্ট
              </button>
           </div>
         </div>
@@ -226,12 +219,6 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
               </div>
             ))}
           </div>
-          <button 
-            onClick={onOpenAi}
-            className="w-full mt-6 bg-slate-900 dark:bg-slate-700 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all"
-          >
-            এআই পরামর্শ নিন
-          </button>
         </div>
       </div>
 

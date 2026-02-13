@@ -2,9 +2,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, X, Sparkles, 
-  Minimize2, Volume2, VolumeX, Loader2
+  Minimize2, Loader2
 } from 'lucide-react';
-import { chatWithGrokStream, speakText } from '../services/gemini';
+import { chatWithGrokStream } from '../services/gemini';
 import { translations, Language } from '../translations';
 import { AI_AVATAR_URL } from '../constants';
 
@@ -20,10 +20,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName, forceOpen, setF
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{role: 'user' | 'grok', text: string}[]>([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   
   const scrollRef = useRef<HTMLDivElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
   const t = translations[lang];
 
   useEffect(() => {
@@ -73,10 +71,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName, forceOpen, setF
           return updated;
         });
       }
-
-      if (isVoiceEnabled && currentText) {
-        await playAudioResponse(currentText);
-      }
     } catch (err) {
       console.error(err);
       setMessages(prev => {
@@ -86,36 +80,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName, forceOpen, setF
       });
     } finally {
       setIsTyping(false);
-    }
-  };
-
-  const playAudioResponse = async (text: string) => {
-    if (!isVoiceEnabled || !text) return;
-    try {
-      const base64Audio = await speakText(text);
-      if (base64Audio) {
-        if (!audioContextRef.current) {
-          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-        }
-        const ctx = audioContextRef.current;
-        if (ctx.state === 'suspended') await ctx.resume();
-
-        const binaryString = atob(base64Audio);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-        
-        const dataInt16 = new Int16Array(bytes.buffer);
-        const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
-        const channelData = buffer.getChannelData(0);
-        for (let i = 0; i < dataInt16.length; i++) channelData[i] = dataInt16[i] / 32768.0;
-        
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ctx.destination);
-        source.start();
-      }
-    } catch (err) { 
-      console.error("Playback error:", err); 
     }
   };
 
@@ -142,9 +106,6 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName, forceOpen, setF
               </div>
             </div>
             <div className="flex gap-1 shrink-0">
-              <button onClick={() => setIsVoiceEnabled(!isVoiceEnabled)} className={`p-2 rounded-xl transition-all ${isVoiceEnabled ? 'bg-white/20' : 'opacity-40'}`}>
-                {isVoiceEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-              </button>
               <button onClick={handleClose} className="p-2 hover:bg-white/10 rounded-xl">
                 <Minimize2 size={18} />
               </button>
@@ -192,7 +153,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName, forceOpen, setF
       <div className="relative pointer-events-auto cursor-pointer group" onClick={() => setIsOpen(!isOpen)}>
         {!isOpen && (
           <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 rounded-[24px] sm:rounded-[30px] flex items-center justify-center shadow-2xl border border-white/10 hover:scale-110 active:scale-95 transition-all">
-            <Sparkles size={28} className="text-yellow-400 animate-pulse" />
+            <span className="text-xl">💬</span>
           </div>
         )}
         {isOpen && (
