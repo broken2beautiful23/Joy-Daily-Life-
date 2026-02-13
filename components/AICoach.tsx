@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, Sparkles, Volume2, VolumeX, 
-  Bot, Zap, RefreshCw
+  Bot, Zap, RefreshCw, Loader2
 } from 'lucide-react';
 import { chatWithGrokStream, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -32,8 +32,8 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
   useEffect(() => {
     if (messages.length === 0) {
       const greeting = lang === 'bn' 
-        ? `নমস্কার ${userName}! আমি গ্ৰোক। আজ আমি আপনাকে কীভাবে সাহায্য করতে পারি?` 
-        : `Hello ${userName}! I am Grok. How can I assist you today?`;
+        ? `নমস্কার ${userName}! আমি আপনার এআই কোচ। আজ আপনার ক্যারিয়ার বা জীবন নিয়ে কোনো প্রশ্ন আছে?` 
+        : `Hello ${userName}! I am your AI Coach. Do you have any questions about your career or life today?`;
       setMessages([{ role: 'grok', text: greeting }]);
     }
   }, [lang, userName, messages.length]);
@@ -57,28 +57,39 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
           return newMsgs;
         });
       }
+
+      if (isVoiceEnabled && fullResponse) {
+        await playAudio(fullResponse);
+      }
     } catch (err) {
       console.error(err);
     } finally {
       setIsTyping(false);
-      if (isVoiceEnabled && fullResponse) {
-        const base64Audio = await speakText(fullResponse);
-        if (base64Audio) {
-           if (!audioContextRef.current) audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-           const ctx = audioContextRef.current;
-           const binaryString = atob(base64Audio);
-           const bytes = new Uint8Array(binaryString.length);
-           for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-           const dataInt16 = new Int16Array(bytes.buffer);
-           const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
-           const channelData = buffer.getChannelData(0);
-           for (let i = 0; i < dataInt16.length; i++) channelData[i] = dataInt16[i] / 32768.0;
-           const source = ctx.createBufferSource();
-           source.buffer = buffer;
-           source.connect(ctx.destination);
-           source.start();
-        }
-      }
+    }
+  };
+
+  const playAudio = async (text: string) => {
+    const base64Audio = await speakText(text);
+    if (base64Audio) {
+       if (!audioContextRef.current) {
+         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+       }
+       const ctx = audioContextRef.current;
+       if (ctx.state === 'suspended') await ctx.resume();
+
+       const binaryString = atob(base64Audio);
+       const bytes = new Uint8Array(binaryString.length);
+       for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+       
+       const dataInt16 = new Int16Array(bytes.buffer);
+       const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
+       const channelData = buffer.getChannelData(0);
+       for (let i = 0; i < dataInt16.length; i++) channelData[i] = dataInt16[i] / 32768.0;
+       
+       const source = ctx.createBufferSource();
+       source.buffer = buffer;
+       source.connect(ctx.destination);
+       source.start();
     }
   };
 
@@ -89,11 +100,14 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
           <div className="p-8 bg-slate-900 text-white flex items-center justify-between shadow-xl relative z-10">
             <div className="flex items-center gap-5">
               <div className="w-14 h-14 rounded-3xl bg-white/20 p-1.5 shadow-inner">
-                <img src={AI_AVATAR_URL} alt="Grok" className="w-full h-full object-cover rounded-2xl" />
+                <img src={AI_AVATAR_URL} alt="Joy AI" className="w-full h-full object-cover rounded-2xl" />
               </div>
               <div>
                 <h3 className="font-black text-2xl tracking-tighter flex items-center gap-2">{t.ai_name} <Zap size={16} className="fill-yellow-300 text-yellow-300" /></h3>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70 tracking-widest">{t.ai_role}</p>
+                <div className="flex items-center gap-2">
+                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                   <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70 tracking-widest">{t.ai_role}</p>
+                </div>
               </div>
             </div>
             <div className="flex gap-2">
@@ -109,15 +123,10 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                 <div className={`p-6 rounded-[36px] text-lg font-bold shadow-md whitespace-pre-wrap leading-relaxed ${
                   msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                 }`}>
-                  {msg.text || (msg.role === 'grok' ? 'গ্ৰোক টাইপ করছে...' : '')}
+                  {msg.text || (msg.role === 'grok' ? <Loader2 className="animate-spin text-blue-500" size={24} /> : '')}
                 </div>
               </div>
             ))}
-            {isTyping && messages[messages.length-1]?.text === '' && (
-              <div className="p-6 text-slate-400 italic font-black text-xs uppercase tracking-widest animate-pulse flex items-center gap-2">
-                <RefreshCw size={14} className="animate-spin" /> গ্ৰোক উত্তর জেনারেট করছে...
-              </div>
-            )}
           </div>
 
           <div className="p-10 bg-white border-t border-slate-50">
@@ -132,7 +141,7 @@ const AICoach: React.FC<AICoachProps> = ({ lang, userName }) => {
                   disabled={isTyping}
                 />
                 <button type="submit" disabled={!input.trim() || isTyping} className="absolute right-3 top-1/2 -translate-y-1/2 w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-xl hover:bg-black disabled:opacity-50 transition-all">
-                  <Send size={24} />
+                  {isTyping ? <Loader2 className="animate-spin" size={24} /> : <Send size={24} />}
                 </button>
               </form>
             </div>

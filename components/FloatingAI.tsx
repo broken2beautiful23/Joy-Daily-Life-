@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, X, Sparkles, 
-  Minimize2, Volume2, VolumeX
+  Minimize2, Volume2, VolumeX, Loader2
 } from 'lucide-react';
 import { chatWithGrokStream, speakText } from '../services/gemini';
 import { translations, Language } from '../translations';
@@ -42,8 +42,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName, forceOpen, setF
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       const greeting = lang === 'bn' 
-        ? `নমস্কার ${userName}! আমি গ্ৰোক। আজ আমি আপনাকে কীভাবে সাহায্য করতে পারি?` 
-        : `Hello ${userName}! I am Grok. How can I assist you today?`;
+        ? `নমস্কার ${userName}! আমি জয়। আজ আমি আপনাকে কীভাবে সাহায্য করতে পারি?` 
+        : `Hello ${userName}! I am Joy. How can I assist you today?`;
       setMessages([{ role: 'grok', text: greeting }]);
     }
   }, [isOpen, userName, lang, messages.length]);
@@ -56,6 +56,8 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName, forceOpen, setF
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
     setIsTyping(true);
+    
+    // Placeholder for AI response
     setMessages(prev => [...prev, { role: 'grok', text: '' }]);
     
     let currentText = '';
@@ -71,13 +73,19 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName, forceOpen, setF
           return updated;
         });
       }
+
+      if (isVoiceEnabled && currentText) {
+        await playAudioResponse(currentText);
+      }
     } catch (err) {
       console.error(err);
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: 'grok', text: "দুঃখিত, কোনো একটি সমস্যা হয়েছে।" };
+        return updated;
+      });
     } finally {
       setIsTyping(false);
-      if (isVoiceEnabled && currentText) {
-        playAudioResponse(currentText);
-      }
     }
   };
 
@@ -86,21 +94,29 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName, forceOpen, setF
     try {
       const base64Audio = await speakText(text);
       if (base64Audio) {
-        if (!audioContextRef.current) audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+        if (!audioContextRef.current) {
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+        }
         const ctx = audioContextRef.current;
+        if (ctx.state === 'suspended') await ctx.resume();
+
         const binaryString = atob(base64Audio);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+        
         const dataInt16 = new Int16Array(bytes.buffer);
         const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
         const channelData = buffer.getChannelData(0);
         for (let i = 0; i < dataInt16.length; i++) channelData[i] = dataInt16[i] / 32768.0;
+        
         const source = ctx.createBufferSource();
         source.buffer = buffer;
         source.connect(ctx.destination);
         source.start();
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error("Playback error:", err); 
+    }
   };
 
   const handleClose = () => {
@@ -115,11 +131,14 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName, forceOpen, setF
           <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-white/10 rounded-2xl overflow-hidden shadow-inner shrink-0">
-                <img src={AI_AVATAR_URL} alt="Grok" className="w-full h-full object-cover" />
+                <img src={AI_AVATAR_URL} alt="Joy AI" className="w-full h-full object-cover" />
               </div>
               <div className="min-w-0">
                 <h4 className="font-black text-lg tracking-tight truncate">{t.ai_name}</h4>
-                <p className="text-[10px] uppercase font-black opacity-70 tracking-widest truncate">{t.ai_role}</p>
+                <div className="flex items-center gap-2">
+                   <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                   <p className="text-[10px] uppercase font-black opacity-70 tracking-widest truncate">{t.ai_role}</p>
+                </div>
               </div>
             </div>
             <div className="flex gap-1 shrink-0">
@@ -140,19 +159,10 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName, forceOpen, setF
                     ? 'bg-blue-600 text-white rounded-tr-none' 
                     : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                 }`}>
-                  {msg.text || (msg.role === 'grok' ? 'গ্ৰোক টাইপ করছে...' : '')}
+                  {msg.text || (msg.role === 'grok' ? <Loader2 className="animate-spin text-blue-500" size={16} /> : '')}
                 </div>
               </div>
             ))}
-            {isTyping && messages[messages.length-1]?.text === '' && (
-              <div className="flex justify-start animate-in fade-in">
-                <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-100 flex gap-1.5 shadow-sm">
-                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></div>
-                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="p-4 sm:p-6 bg-white border-t border-slate-50">
@@ -171,7 +181,7 @@ const FloatingAI: React.FC<FloatingAIProps> = ({ lang, userName, forceOpen, setF
                   disabled={!input.trim() || isTyping} 
                   className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-slate-900 text-white rounded-xl sm:rounded-2xl flex items-center justify-center disabled:opacity-50 hover:bg-black transition-colors shadow-lg"
                 >
-                  <Send size={20} />
+                  {isTyping ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
                 </button>
               </form>
             </div>

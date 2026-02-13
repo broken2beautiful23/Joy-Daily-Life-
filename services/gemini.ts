@@ -10,9 +10,9 @@ const VOICE_MODEL = 'gemini-2.5-flash-preview-tts';
  * Direct stream with Joy Kumar Biswas AI.
  */
 export async function* chatWithGrokStream(userMessage: string, userData: any) {
-  const apiKey = process.env.API_KEY || '';
+  const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    yield "এপিআই কী পাওয়া যায়নি। দয়া করে সেটিংস চেক করুন।";
+    yield "এপিআই কী (API KEY) পাওয়া যায়নি। সিস্টেম অ্যাডমিনের সাথে যোগাযোগ করুন।";
     return;
   }
   
@@ -29,18 +29,20 @@ export async function* chatWithGrokStream(userMessage: string, userData: any) {
       }],
       config: {
         systemInstruction: GROK_SYSTEM_PROMPT,
-        temperature: 0.9,
+        temperature: 0.8,
+        topP: 0.95,
       },
     });
 
     for await (const chunk of responseStream) {
-      if (chunk.text) {
-        yield chunk.text;
+      const text = chunk.text;
+      if (text) {
+        yield text;
       }
     }
   } catch (error: any) {
-    console.error("AI Error:", error);
-    yield "দুঃখিত বন্ধু, আমি এই মুহূর্তে উত্তর দিতে পারছি না। কারিগরি সমস্যার জন্য আমি লজ্জিত। দয়া করে কিছুক্ষণ পর আবার চেষ্টা করুন।";
+    console.error("Gemini AI Error:", error);
+    yield "দুঃখিত বন্ধু, আমি এই মুহূর্তে সংযোগ করতে পারছি না। দয়া করে আপনার ইন্টারনেট চেক করুন অথবা কিছুক্ষণ পর আবার চেষ্টা করুন।";
   }
 }
 
@@ -48,15 +50,15 @@ export async function* chatWithGrokStream(userMessage: string, userData: any) {
  * Text-to-speech for AI.
  */
 export async function speakText(text: string): Promise<string | null> {
-  const apiKey = process.env.API_KEY || '';
-  if (!apiKey) return null;
+  const apiKey = process.env.API_KEY;
+  if (!apiKey || !text) return null;
   
   const ai = new GoogleGenAI({ apiKey });
   
   try {
     const response = await ai.models.generateContent({
       model: VOICE_MODEL,
-      contents: [{ parts: [{ text }] }],
+      contents: [{ parts: [{ text: `Say warmly: ${text}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
@@ -67,7 +69,8 @@ export async function speakText(text: string): Promise<string | null> {
       },
     });
 
-    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
+    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    return audioData || null;
   } catch (error) {
     console.error("AI Voice Error:", error);
     return null;
