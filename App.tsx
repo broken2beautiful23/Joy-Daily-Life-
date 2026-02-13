@@ -18,13 +18,14 @@ import DailyEssentials from './components/DailyEssentials';
 import EducationCareer from './components/EducationCareer';
 import EntertainmentHobbies from './components/EntertainmentHobbies';
 import FloatingAI from './components/FloatingAI';
+import Profile from './components/Profile';
 import { translations, Language } from './translations';
 import { supabase } from './services/supabase';
 import { 
   LogOut, Menu, X, Sparkles, 
   ArrowRight, Search, Sun, Moon,
   MessageSquare, Facebook, Instagram, Mail,
-  LogIn, UserPlus, Ghost, Lock, Mail as MailIcon, Loader2
+  LogIn, UserPlus, Ghost, Lock, Mail as MailIcon, Loader2, User
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -36,7 +37,9 @@ const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState('ইউজার');
+  const [userAvatar, setUserAvatar] = useState('');
   const [isAiOpen, setIsAiOpen] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   
   // Auth UI States
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -56,7 +59,8 @@ const App: React.FC = () => {
       if (session) {
         setIsAuthenticated(true);
         setUserId(session.user.id);
-        setUserName(session.user.email?.split('@')[0] || 'User');
+        setUserName(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User');
+        setUserAvatar(session.user.user_metadata?.avatar_url || '');
       }
     });
 
@@ -64,9 +68,11 @@ const App: React.FC = () => {
       setIsAuthenticated(!!session);
       if (session) {
         setUserId(session.user.id);
-        setUserName(session.user.email?.split('@')[0] || 'User');
+        setUserName(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User');
+        setUserAvatar(session.user.user_metadata?.avatar_url || '');
       } else {
         setUserId(null);
+        setUserAvatar('');
       }
     });
 
@@ -350,10 +356,20 @@ const App: React.FC = () => {
             <button onClick={toggleDarkMode} className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-indigo-600 border border-slate-100 dark:border-slate-700">
                {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
+            
+            {/* PROFILE ICON HEADER */}
             <div className="flex items-center gap-3 pl-4 border-l border-slate-100 dark:border-slate-800">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black text-sm shadow-sm">
-                {userName.charAt(0)}
-              </div>
+              <button 
+                onClick={() => !isGuest && setShowProfile(true)}
+                className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shadow-sm overflow-hidden transition-all ${isGuest ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:ring-4 hover:ring-indigo-500/10 active:scale-95'}`}
+                title={isGuest ? t.guest_mode_active : t.profile_settings}
+              >
+                {userAvatar ? (
+                  <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  userName.charAt(0)
+                )}
+              </button>
             </div>
           </div>
         </header>
@@ -399,6 +415,19 @@ const App: React.FC = () => {
           forceOpen={isAiOpen} 
           setForceOpen={setIsAiOpen} 
         />
+        
+        {/* PROFILE MODAL/DRAWER */}
+        {showProfile && userId && (
+          <Profile 
+            userId={userId} 
+            lang={lang} 
+            onClose={() => setShowProfile(false)} 
+            onProfileUpdate={(newName, newAvatar) => {
+              setUserName(newName);
+              setUserAvatar(newAvatar);
+            }}
+          />
+        )}
       </div>
     </div>
   );

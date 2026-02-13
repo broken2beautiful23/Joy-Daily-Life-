@@ -97,7 +97,15 @@ export const translations = {
     ai_role: "এআই অ্যাসিস্ট্যান্ট",
     ask_joy: "কিছু জিজ্ঞেস করুন...",
     complaint_box: "অভিযোগ ও আইডিয়া",
-    footer_copyright: "© ২০২৫ জয় কুমার বিশ্বাস। সর্বস্বত্ব সংরক্ষিত।"
+    footer_copyright: "© ২০২৫ জয় কুমার বিশ্বাস। সর্বস্বত্ব সংরক্ষিত।",
+    profile_settings: "প্রোফাইল সেটিংস",
+    personal_info: "ব্যক্তিগত তথ্য",
+    phone: "ফোন নম্বর",
+    change_password: "পাসওয়ার্ড পরিবর্তন করুন",
+    new_password: "নতুন পাসওয়ার্ড",
+    update_success: "সফলভাবে আপডেট করা হয়েছে!",
+    password_updated: "পাসওয়ার্ড পরিবর্তন হয়েছে!",
+    select_image: "ছবি নির্বাচন করুন"
   },
   en: {
     app_name: "Joy Kumar Biswas",
@@ -196,7 +204,15 @@ export const translations = {
     ai_role: "AI Assistant",
     ask_joy: "Ask anything...",
     complaint_box: "Complaints & Ideas",
-    footer_copyright: "© 2025 Joy Kumar Biswas. All Rights Reserved."
+    footer_copyright: "© 2025 Joy Kumar Biswas. All Rights Reserved.",
+    profile_settings: "Profile Settings",
+    personal_info: "Personal Information",
+    phone: "Phone Number",
+    change_password: "Change Password",
+    new_password: "New Password",
+    update_success: "Successfully Updated!",
+    password_updated: "Password Changed!",
+    select_image: "Select Image"
   }
 };
 
