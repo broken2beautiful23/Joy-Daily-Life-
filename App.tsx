@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { NAVIGATION_ITEMS } from './constants';
 import Dashboard from './components/Dashboard';
 import Diary from './components/Diary';
@@ -122,12 +122,14 @@ const App: React.FC = () => {
     else document.body.classList.remove('dark-mode');
   };
 
-  const filteredSuggestions = searchQuery.trim() === '' 
-    ? NAVIGATION_ITEMS 
-    : NAVIGATION_ITEMS.filter(item => 
-        item.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        item.id.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+  const filteredSuggestions = useMemo(() => {
+    return searchQuery.trim() === '' 
+      ? NAVIGATION_ITEMS 
+      : NAVIGATION_ITEMS.filter(item => 
+          item.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
+          item.id.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+  }, [searchQuery]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,25 +150,26 @@ const App: React.FC = () => {
     if (!userId && !isGuest) return null;
     const effectiveUserId = userId || 'guest_user_id';
     
-    const components: Record<string, React.ReactElement> = {
-      dashboard: <Dashboard lang={lang} userName={userName} userId={effectiveUserId} onNavigate={setActiveTab} onOpenAi={() => setIsAiOpen(true)} />,
-      essentials: <DailyEssentials lang={lang} userName={userName} />,
-      education: <EducationCareer lang={lang} userName={userName} />,
-      entertainment: <EntertainmentHobbies lang={lang} userName={userName} />,
-      health: <LifestyleHealth lang={lang} userId={effectiveUserId} />,
-      worktimer: <WorkTimer lang={lang} userId={effectiveUserId} />,
-      profwork: <ProfessionalWork lang={lang} userId={effectiveUserId} />,
-      worklog: <WorkLog lang={lang} userId={effectiveUserId} />,
-      stories: <MotivationalStories lang={lang} onNavigate={setActiveTab} />,
-      diary: <Diary userId={effectiveUserId} />,
-      tasks: <Tasks userId={effectiveUserId} />,
-      expenses: <Expenses lang={lang} userId={effectiveUserId} />,
-      goals: <Goals userId={effectiveUserId} />,
-      study: <StudyPlanner userId={effectiveUserId} />,
-      notes: <Notes userId={effectiveUserId} />,
-      memories: <MemoryGallery userId={effectiveUserId} />,
-    };
-    return components[activeTab] || components.dashboard;
+    // Using a simple switch/case for cleaner and potentially faster mapping
+    switch (activeTab) {
+      case 'dashboard': return <Dashboard lang={lang} userName={userName} userId={effectiveUserId} onNavigate={setActiveTab} onOpenAi={() => setIsAiOpen(true)} />;
+      case 'essentials': return <DailyEssentials lang={lang} userName={userName} />;
+      case 'education': return <EducationCareer lang={lang} userName={userName} />;
+      case 'entertainment': return <EntertainmentHobbies lang={lang} userName={userName} />;
+      case 'health': return <LifestyleHealth lang={lang} userId={effectiveUserId} />;
+      case 'worktimer': return <WorkTimer lang={lang} userId={effectiveUserId} />;
+      case 'profwork': return <ProfessionalWork lang={lang} userId={effectiveUserId} />;
+      case 'worklog': return <WorkLog lang={lang} userId={effectiveUserId} />;
+      case 'stories': return <MotivationalStories lang={lang} onNavigate={setActiveTab} />;
+      case 'diary': return <Diary userId={effectiveUserId} />;
+      case 'tasks': return <Tasks userId={effectiveUserId} />;
+      case 'expenses': return <Expenses lang={lang} userId={effectiveUserId} />;
+      case 'goals': return <Goals userId={effectiveUserId} />;
+      case 'study': return <StudyPlanner userId={effectiveUserId} />;
+      case 'notes': return <Notes userId={effectiveUserId} />;
+      case 'memories': return <MemoryGallery userId={effectiveUserId} />;
+      default: return <Dashboard lang={lang} userName={userName} userId={effectiveUserId} onNavigate={setActiveTab} onOpenAi={() => setIsAiOpen(true)} />;
+    }
   };
 
   if (!isAuthenticated && !isGuest) {
