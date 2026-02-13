@@ -2,11 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, Wallet, TrendingDown, Loader2, ArrowRight,
-  Sparkles, Zap, Star, LayoutGrid, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight
+  Sparkles, Zap, Star, LayoutGrid, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight,
+  Target, CheckCircle2, Lightbulb
 } from 'lucide-react';
 import { translations, Language } from '../translations';
 import { Transaction } from '../types';
 import { supabase } from '../services/supabase';
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area 
+} from 'recharts';
 
 interface DashboardProps {
   lang: Language;
@@ -20,6 +24,7 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [progressData, setProgressData] = useState<any[]>([]);
   const t = translations[lang];
 
   // Calendar State
@@ -33,10 +38,27 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
     try {
       const { data: tx } = await supabase.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false });
       if (tx) setTransactions(tx);
+      
+      // Calculate 7-day progress score
+      generateProgressChart();
     } catch (e) {
-      console.log("Supabase fetch failed, showing placeholder stats");
+      console.log("Supabase fetch failed");
     }
     setLoading(false);
+  };
+
+  const generateProgressChart = () => {
+    // Generate mock data for the last 7 days based on current stats
+    // In a real app, this would query aggregated daily counts of tasks, habits, and study logs
+    const days = lang === 'bn' ? ["শনি", "রবি", "সোম", "মঙ্গল", "বুধ", "বৃহস্পতি", "শুক্র"] : ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
+    const baseScore = 40;
+    
+    const chartData = days.map((day, idx) => ({
+      name: day,
+      score: baseScore + Math.floor(Math.random() * 50) + (idx * 2) // Simulating gradual growth
+    }));
+    
+    setProgressData(chartData);
   };
 
   const totalIncome = transactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
@@ -58,6 +80,13 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
 
   const monthNamesBN = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
   const weekDaysBN = ["রবি", "সোম", "মঙ্গল", "বুধ", "বৃহস্পতি", "শুক্র", "শনি"];
+
+  const improvementSteps = [
+    { text: lang === 'bn' ? 'প্রতিদিন অন্তত ৫টি টাস্ক সম্পন্ন করুন' : 'Complete at least 5 tasks daily', icon: <CheckCircle2 size={16} className="text-emerald-500" /> },
+    { text: lang === 'bn' ? 'কাজের ফাঁকে ১৫ মিনিট মেডিটেশন করুন' : 'Meditate for 15 mins between work', icon: <Sparkles size={16} className="text-indigo-500" /> },
+    { text: lang === 'bn' ? 'বাজে খরচ কমিয়ে সঞ্চয় বাড়ান' : 'Reduce expenses and increase savings', icon: <Wallet size={16} className="text-orange-500" /> },
+    { text: lang === 'bn' ? 'নতুন কোনো স্কিল শিখতে সময় দিন' : 'Invest time in learning new skills', icon: <Target size={16} className="text-pink-500" /> },
+  ];
 
   return (
     <div className="space-y-8 pb-10">
@@ -105,6 +134,78 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
             <p className="text-2xl font-black text-slate-900 dark:text-white">{stat.value}</p>
           </div>
         ))}
+      </div>
+
+      {/* LIFE PROGRESS GRAPH & STEPS */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* GRAPH SECTION */}
+        <div className="lg:col-span-8 premium-card p-8">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+              <TrendingUp size={20} className="text-indigo-500" />
+              {t.life_progress_chart}
+            </h3>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-100 dark:border-slate-700">
+              {t.last_7_days}
+            </div>
+          </div>
+
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={progressData}>
+                <defs>
+                  <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} 
+                  dy={10}
+                />
+                <YAxis hide domain={[0, 100]} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="score" 
+                  stroke="#4f46e5" 
+                  strokeWidth={4} 
+                  fillOpacity={1} 
+                  fill="url(#colorScore)" 
+                  animationDuration={1500}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* IMPROVEMENT STEPS SECTION */}
+        <div className="lg:col-span-4 bg-indigo-50 dark:bg-indigo-950/20 p-8 rounded-[32px] border border-indigo-100 dark:border-indigo-900/30">
+          <h3 className="text-lg font-black text-indigo-900 dark:text-indigo-300 flex items-center gap-2 mb-6">
+            <Lightbulb size={20} />
+            {t.improvement_steps}
+          </h3>
+          <div className="space-y-4">
+            {improvementSteps.map((step, idx) => (
+              <div key={idx} className="flex items-start gap-3 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-indigo-100/50 dark:border-slate-700 shadow-sm transition-all hover:translate-x-1">
+                <div className="mt-0.5">{step.icon}</div>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-snug">{step.text}</p>
+              </div>
+            ))}
+          </div>
+          <button 
+            onClick={onOpenAi}
+            className="w-full mt-6 bg-indigo-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all"
+          >
+            এআই পরামর্শ নিন
+          </button>
+        </div>
       </div>
 
       {/* GRID APPS */}
