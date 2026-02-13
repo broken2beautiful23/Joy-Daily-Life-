@@ -99,16 +99,17 @@ export const translations = {
     complaint_box: "অভিযোগ ও আইডিয়া",
     footer_copyright: "© ২০২৫ জয় কুমার বিশ্বাস। সর্বস্বত্ব সংরক্ষিত।",
     profile_settings: "প্রোফাইল সেটিংস",
-    personal_info: "ব্যগত তথ্য",
+    personal_info: "ব্যক্তিগত তথ্য",
     phone: "ফোন নম্বর",
     change_password: "পাসওয়ার্ড পরিবর্তন করুন",
     new_password: "নতুন পাসওয়ার্ড",
     update_success: "সফলভাবে আপডেট করা হয়েছে!",
     password_updated: "পাসওয়ার্ড পরিবর্তন হয়েছে!",
     select_image: "ছবি নির্বাচন করুন",
-    life_progress_chart: "জীবন উন্নতির গ্রাফ",
+    life_progress_chart: "জীবন ও আর্থিক উন্নতির গ্রাফ",
     improvement_steps: "উন্নতির পদক্ষেপ",
     score_label: "উন্নতি স্কোর",
+    savings_label: "সঞ্চয় স্কোর",
     analysis_loading: "বিশ্লেষণ করা হচ্ছে..."
   },
   en: {
@@ -217,9 +218,10 @@ export const translations = {
     update_success: "Successfully Updated!",
     password_updated: "Password Changed!",
     select_image: "Select Image",
-    life_progress_chart: "Life Progress Chart",
+    life_progress_chart: "Life & Financial Progress Chart",
     improvement_steps: "Steps to Improve",
     score_label: "Progress Score",
+    savings_label: "Savings Score",
     analysis_loading: "Analyzing stats..."
   }
 };

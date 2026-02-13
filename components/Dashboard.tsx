@@ -3,13 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, Wallet, TrendingDown, Loader2, ArrowRight,
   Sparkles, Zap, Star, LayoutGrid, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight,
-  Target, CheckCircle2, Lightbulb
+  Target, CheckCircle2, Lightbulb, PiggyBank
 } from 'lucide-react';
 import { translations, Language } from '../translations';
 import { Transaction } from '../types';
 import { supabase } from '../services/supabase';
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area 
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend
 } from 'recharts';
 
 interface DashboardProps {
@@ -39,7 +39,6 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
       const { data: tx } = await supabase.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false });
       if (tx) setTransactions(tx);
       
-      // Calculate 7-day progress score
       generateProgressChart();
     } catch (e) {
       console.log("Supabase fetch failed");
@@ -48,14 +47,12 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
   };
 
   const generateProgressChart = () => {
-    // Generate mock data for the last 7 days based on current stats
-    // In a real app, this would query aggregated daily counts of tasks, habits, and study logs
     const days = lang === 'bn' ? ["শনি", "রবি", "সোম", "মঙ্গল", "বুধ", "বৃহস্পতি", "শুক্র"] : ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
-    const baseScore = 40;
     
     const chartData = days.map((day, idx) => ({
       name: day,
-      score: baseScore + Math.floor(Math.random() * 50) + (idx * 2) // Simulating gradual growth
+      score: 40 + Math.floor(Math.random() * 50) + (idx * 2), // Simulated Life Progress
+      savings: 30 + Math.floor(Math.random() * 60) // Simulated Financial Performance
     }));
     
     setProgressData(chartData);
@@ -83,9 +80,9 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
 
   const improvementSteps = [
     { text: lang === 'bn' ? 'প্রতিদিন অন্তত ৫টি টাস্ক সম্পন্ন করুন' : 'Complete at least 5 tasks daily', icon: <CheckCircle2 size={16} className="text-emerald-500" /> },
-    { text: lang === 'bn' ? 'কাজের ফাঁকে ১৫ মিনিট মেডিটেশন করুন' : 'Meditate for 15 mins between work', icon: <Sparkles size={16} className="text-indigo-500" /> },
-    { text: lang === 'bn' ? 'বাজে খরচ কমিয়ে সঞ্চয় বাড়ান' : 'Reduce expenses and increase savings', icon: <Wallet size={16} className="text-orange-500" /> },
-    { text: lang === 'bn' ? 'নতুন কোনো স্কিল শিখতে সময় দিন' : 'Invest time in learning new skills', icon: <Target size={16} className="text-pink-500" /> },
+    { text: lang === 'bn' ? 'অপ্রয়োজনীয় খরচ কমিয়ে সঞ্চয় বাড়ান' : 'Reduce unnecessary costs to save more', icon: <PiggyBank size={16} className="text-emerald-600" /> },
+    { text: lang === 'bn' ? 'বাজেট তৈরি করে আর্থিক লক্ষ্য সেট করুন' : 'Create a budget and set financial goals', icon: <Target size={16} className="text-orange-500" /> },
+    { text: lang === 'bn' ? 'পেশাদার স্কিল শিখুন আয় বৃদ্ধির জন্য' : 'Learn pro skills to increase income', icon: <Zap size={16} className="text-indigo-500" /> },
   ];
 
   return (
@@ -99,11 +96,11 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
           </div>
           
           <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-none">
-            সুপ্রভাত, {userName}!<br/><span className="text-indigo-400">জীবন হোক সুশৃঙ্খল।</span>
+            সুপ্রভাত, {userName}!<br/><span className="text-indigo-400">জীবন ও অর্থ হোক সুশৃঙ্খল।</span>
           </h1>
           
           <p className="text-sm text-white/50 font-medium max-w-lg">
-            আপনার লক্ষ্য এবং প্রতিদিনের কাজের হিসাব এখন এক জায়গায়। আজ আপনি কী অর্জন করতে চান?
+            আপনার ক্যারিয়ার উন্নতি এবং আর্থিক সঞ্চয়ের হিসাব এখন এক নজরে। আজ আপনি নতুন কী শিখবেন?
           </p>
 
           <div className="flex flex-wrap gap-3 pt-4">
@@ -136,7 +133,7 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
         ))}
       </div>
 
-      {/* LIFE PROGRESS GRAPH & STEPS */}
+      {/* LIFE & FINANCIAL PROGRESS GRAPH & STEPS */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* GRAPH SECTION */}
         <div className="lg:col-span-8 premium-card p-8">
@@ -145,8 +142,15 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
               <TrendingUp size={20} className="text-indigo-500" />
               {t.life_progress_chart}
             </h3>
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-100 dark:border-slate-700">
-              {t.last_7_days}
+            <div className="flex items-center gap-4">
+               <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
+                  <span className="text-[9px] font-black uppercase text-slate-400">{t.score_label}</span>
+               </div>
+               <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                  <span className="text-[9px] font-black uppercase text-slate-400">{t.savings_label}</span>
+               </div>
             </div>
           </div>
 
@@ -155,8 +159,12 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
               <AreaChart data={progressData}>
                 <defs>
                   <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
+                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.2}/>
                     <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorSavings" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -169,15 +177,34 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
                 />
                 <YAxis hide domain={[0, 100]} />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
+                  contentStyle={{ 
+                    borderRadius: '20px', 
+                    border: 'none', 
+                    boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', 
+                    fontWeight: '800',
+                    fontSize: '12px',
+                    padding: '12px'
+                  }}
+                  itemStyle={{ padding: '2px 0' }}
                 />
                 <Area 
                   type="monotone" 
+                  name={t.score_label}
                   dataKey="score" 
                   stroke="#4f46e5" 
                   strokeWidth={4} 
                   fillOpacity={1} 
                   fill="url(#colorScore)" 
+                  animationDuration={1500}
+                />
+                <Area 
+                  type="monotone" 
+                  name={t.savings_label}
+                  dataKey="savings" 
+                  stroke="#10b981" 
+                  strokeWidth={4} 
+                  fillOpacity={1} 
+                  fill="url(#colorSavings)" 
                   animationDuration={1500}
                 />
               </AreaChart>
@@ -186,14 +213,14 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
         </div>
 
         {/* IMPROVEMENT STEPS SECTION */}
-        <div className="lg:col-span-4 bg-indigo-50 dark:bg-indigo-950/20 p-8 rounded-[32px] border border-indigo-100 dark:border-indigo-900/30">
-          <h3 className="text-lg font-black text-indigo-900 dark:text-indigo-300 flex items-center gap-2 mb-6">
-            <Lightbulb size={20} />
+        <div className="lg:col-span-4 bg-slate-50 dark:bg-slate-900/50 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800">
+          <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2 mb-6">
+            <Lightbulb size={20} className="text-yellow-500" />
             {t.improvement_steps}
           </h3>
           <div className="space-y-4">
             {improvementSteps.map((step, idx) => (
-              <div key={idx} className="flex items-start gap-3 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-indigo-100/50 dark:border-slate-700 shadow-sm transition-all hover:translate-x-1">
+              <div key={idx} className="flex items-start gap-3 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm transition-all hover:translate-x-1">
                 <div className="mt-0.5">{step.icon}</div>
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-snug">{step.text}</p>
               </div>
@@ -201,7 +228,7 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
           </div>
           <button 
             onClick={onOpenAi}
-            className="w-full mt-6 bg-indigo-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all"
+            className="w-full mt-6 bg-slate-900 dark:bg-slate-700 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all"
           >
             এআই পরামর্শ নিন
           </button>
@@ -241,52 +268,6 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
                 </button>
               ))}
            </div>
-
-           {/* CALENDAR MODAL POPUP */}
-           {isCalendarOpen && (
-             <div className="absolute top-20 right-8 z-50 w-80 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-2xl p-6 animate-in zoom-in duration-200">
-               <div className="flex items-center justify-between mb-6">
-                 <h4 className="font-black text-sm text-slate-800 dark:text-white uppercase tracking-widest">
-                   {monthNamesBN[currentDate.getMonth()]} {currentDate.getFullYear()}
-                 </h4>
-                 <div className="flex gap-1">
-                   <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"><ChevronLeft size={16}/></button>
-                   <button onClick={handleNextMonth} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"><ChevronRight size={16}/></button>
-                 </div>
-               </div>
-               
-               <div className="grid grid-cols-7 gap-1 mb-2">
-                 {weekDaysBN.map(day => (
-                   <div key={day} className="text-center text-[9px] font-black text-slate-400 uppercase">{day}</div>
-                 ))}
-               </div>
-               
-               <div className="grid grid-cols-7 gap-1">
-                 {Array.from({ length: firstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => (
-                   <div key={`empty-${i}`} />
-                 ))}
-                 {Array.from({ length: daysInMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => {
-                   const day = i + 1;
-                   const isToday = new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
-                   return (
-                     <div 
-                       key={day} 
-                       className={`h-9 flex items-center justify-center rounded-xl text-xs font-bold transition-all ${isToday ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                     >
-                       {day}
-                     </div>
-                   );
-                 })}
-               </div>
-
-               <button 
-                onClick={() => setIsCalendarOpen(false)}
-                className="mt-6 w-full py-2 bg-slate-50 dark:bg-slate-800 text-slate-400 font-black text-[9px] uppercase tracking-widest rounded-xl"
-               >
-                 বন্ধ করুন
-               </button>
-             </div>
-           )}
         </div>
 
         <div className="lg:col-span-4 bg-indigo-600 rounded-[32px] p-8 text-white flex flex-col justify-between shadow-lg">
@@ -294,14 +275,14 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                  <Zap size={20} className="text-yellow-300 fill-yellow-300" />
               </div>
-              <h3 className="text-xl font-black tracking-tight leading-tight">সাফল্য হলো প্রতিদিনের ছোট ছোট চেষ্টার ফল।</h3>
-              <p className="text-white/60 text-xs font-medium">আজকের একটি ছোট কাজ কাল বড় সাফল্যের ভিত্তি হতে পারে।</p>
+              <h3 className="text-xl font-black tracking-tight leading-tight">সঞ্চয় হলো ভবিষ্যতের জন্য আজকের বড় উপহার।</h3>
+              <p className="text-white/60 text-xs font-medium">প্রতিদিন অল্প অল্প সঞ্চয় আপনাকে একদিন বড় আর্থিক স্বাধীনতা দেবে।</p>
            </div>
            <button 
-             onClick={() => onNavigate('stories')}
+             onClick={() => onNavigate('expenses')}
              className="w-full mt-8 py-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all"
            >
-             অনুপ্রেরণা নিন
+             সঞ্চয় শুরু করুন
            </button>
         </div>
       </div>
