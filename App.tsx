@@ -23,7 +23,8 @@ import { supabase } from './services/supabase';
 import { 
   LogOut, Menu, X, Sparkles, 
   ArrowRight, Search, Sun, Moon,
-  MessageSquare, Facebook, Instagram, Mail
+  MessageSquare, Facebook, Instagram, Mail,
+  LogIn, UserPlus, Ghost, Lock, Mail as MailIcon, Loader2
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -37,6 +38,12 @@ const App: React.FC = () => {
   const [userName, setUserName] = useState('ইউজার');
   const [isAiOpen, setIsAiOpen] = useState(false);
   
+  // Auth UI States
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -58,6 +65,8 @@ const App: React.FC = () => {
       if (session) {
         setUserId(session.user.id);
         setUserName(session.user.email?.split('@')[0] || 'User');
+      } else {
+        setUserId(null);
       }
     });
 
@@ -77,6 +86,27 @@ const App: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const handleAuthAction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) return;
+    setAuthLoading(true);
+
+    try {
+      if (authMode === 'signup') {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        alert(lang === 'bn' ? "রেজিস্ট্রেশন সফল! ইমেইল চেক করুন।" : "Signup successful! Check your email.");
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      }
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   const toggleDarkMode = () => {
     const nextMode = !isDarkMode;
@@ -135,28 +165,93 @@ const App: React.FC = () => {
 
   if (!isAuthenticated && !isGuest) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[#f8fafc] dark:bg-[#020617]">
-        <div className="bg-white dark:bg-[#0f172a] rounded-[32px] p-10 w-full max-w-sm shadow-xl border border-slate-100 dark:border-slate-800">
-          <div className="flex flex-col items-center mb-8">
-            <div className="p-4 bg-indigo-600 rounded-2xl text-white mb-4 shadow-lg">
-              <Sparkles size={32} />
+      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 dark:bg-[#020617] transition-colors duration-500">
+        <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
+          <div className="bg-white dark:bg-[#0f172a] rounded-[40px] p-8 md:p-12 shadow-2xl border border-slate-100 dark:border-slate-800 relative overflow-hidden">
+            {/* Background Accent */}
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl"></div>
+            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl"></div>
+
+            <div className="relative z-10">
+              <div className="flex flex-col items-center mb-10">
+                <div className="p-4 bg-indigo-600 rounded-[24px] text-white mb-6 shadow-xl shadow-indigo-500/20">
+                  <Sparkles size={32} />
+                </div>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter text-center leading-none">Joy Daily Life</h1>
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-3">Smart Life Dashboard</p>
+              </div>
+
+              {/* Toggle Buttons */}
+              <div className="flex bg-slate-100 dark:bg-slate-800/50 p-1 rounded-2xl mb-8">
+                <button 
+                  onClick={() => setAuthMode('login')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${authMode === 'login' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+                >
+                  <LogIn size={16} /> {t.log_in_title}
+                </button>
+                <button 
+                  onClick={() => setAuthMode('signup')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${authMode === 'signup' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+                >
+                  <UserPlus size={16} /> {t.sign_up_title}
+                </button>
+              </div>
+
+              <form onSubmit={handleAuthAction} className="space-y-4">
+                <div className="relative">
+                  <MailIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email Address"
+                    required
+                    className="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-white font-bold transition-all"
+                  />
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input 
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Password"
+                    required
+                    className="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-white font-bold transition-all"
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={authLoading}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-indigo-500/10 active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  {authLoading ? <Loader2 className="animate-spin" size={20} /> : <ArrowRight size={20} />}
+                  <span>{authMode === 'login' ? t.log_in_title : t.sign_up_title}</span>
+                </button>
+              </form>
+
+              <div className="relative my-8">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100 dark:border-slate-800"></div></div>
+                <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest"><span className="bg-white dark:bg-[#0f172a] px-4 text-slate-400">OR</span></div>
+              </div>
+
+              <button 
+                onClick={() => setIsGuest(true)} 
+                className="w-full bg-slate-900 dark:bg-slate-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all"
+              >
+                <Ghost size={20} />
+                <span>{t.continue_as_guest}</span>
+              </button>
             </div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter text-center leading-none">Joy Daily Life</h1>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2">Smart Life Dashboard</p>
           </div>
-          <button 
-            onClick={() => setIsGuest(true)} 
-            className="w-full bg-slate-900 dark:bg-indigo-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all"
-          >
-            প্রবেশ করুন <ArrowRight size={18} />
-          </button>
+          <p className="mt-8 text-center text-slate-400 font-bold text-xs uppercase tracking-widest">{t.footer_copyright}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row overflow-hidden">
+    <div className="min-h-screen flex flex-col lg:flex-row overflow-hidden bg-white dark:bg-[#020617] transition-colors duration-500">
       {/* SIDEBAR */}
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-72 bg-white dark:bg-[#0f172a] border-r border-slate-100 dark:border-slate-800 transition-transform duration-200 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-full flex flex-col p-6 overflow-y-auto custom-scrollbar">
@@ -183,15 +278,19 @@ const App: React.FC = () => {
             ))}
           </nav>
 
-          <button onClick={() => { setIsGuest(false); setIsAuthenticated(false); }} className="mt-6 flex items-center gap-3 px-4 py-3 text-rose-500 font-black hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-colors">
-            <LogOut size={20} /> <span className="text-xs uppercase tracking-widest">বেরিয়ে যান</span>
+          <button onClick={async () => { 
+            if (isAuthenticated) await supabase.auth.signOut();
+            setIsGuest(false); 
+            setIsAuthenticated(false); 
+          }} className="mt-6 flex items-center gap-3 px-4 py-3 text-rose-500 font-black hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-colors">
+            <LogOut size={20} /> <span className="text-xs uppercase tracking-widest">{t.sign_out}</span>
           </button>
         </div>
       </aside>
 
       {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="h-16 bg-white dark:bg-[#0f172a] border-b border-slate-100 dark:border-slate-800 flex items-center justify-between px-6 z-40">
+        <header className="h-16 bg-white dark:bg-[#0f172a] border-b border-slate-100 dark:border-slate-800 flex items-center justify-between px-6 z-40 transition-colors">
           <div className="flex items-center gap-4 flex-1">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-indigo-600">
               <Menu size={24}/>
