@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, Wallet, TrendingDown, Loader2, ArrowRight,
-  Sparkles, Zap, Star, LayoutGrid, Calendar
+  Sparkles, Zap, Star, LayoutGrid, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { translations, Language } from '../translations';
 import { Transaction } from '../types';
@@ -19,7 +19,11 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigate, onOpenAi }) => {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const t = translations[lang];
+
+  // Calendar State
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
     fetchDashboardData();
@@ -44,6 +48,16 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
     { label: 'মোট ব্যয়', value: `৳${totalExpense.toLocaleString()}`, icon: <TrendingDown size={20}/>, color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/10' },
     { label: 'ব্যালেন্স', value: `৳${balance.toLocaleString()}`, icon: <Wallet size={20}/>, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-900/10' },
   ];
+
+  // Calendar Logic
+  const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+
+  const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
+  const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+
+  const monthNamesBN = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
+  const weekDaysBN = ["রবি", "সোম", "মঙ্গল", "বুধ", "বৃহস্পতি", "শুক্র", "শনি"];
 
   return (
     <div className="space-y-8 pb-10">
@@ -94,14 +108,19 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
       </div>
 
       {/* GRID APPS */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 relative">
         <div className="lg:col-span-8 premium-card p-8">
            <div className="flex items-center justify-between mb-8">
               <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
                  <LayoutGrid size={20} className="text-indigo-500" />
                  শর্টকাট মেনু
               </h3>
-              <Calendar size={18} className="text-slate-300" />
+              <button 
+                onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+                className={`p-2 rounded-lg transition-all ${isCalendarOpen ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:text-indigo-500 hover:bg-indigo-50'}`}
+              >
+                <CalendarIcon size={20} />
+              </button>
            </div>
            
            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -121,6 +140,52 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
                 </button>
               ))}
            </div>
+
+           {/* CALENDAR MODAL POPUP */}
+           {isCalendarOpen && (
+             <div className="absolute top-20 right-8 z-50 w-80 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-2xl p-6 animate-in zoom-in duration-200">
+               <div className="flex items-center justify-between mb-6">
+                 <h4 className="font-black text-sm text-slate-800 dark:text-white uppercase tracking-widest">
+                   {monthNamesBN[currentDate.getMonth()]} {currentDate.getFullYear()}
+                 </h4>
+                 <div className="flex gap-1">
+                   <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"><ChevronLeft size={16}/></button>
+                   <button onClick={handleNextMonth} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"><ChevronRight size={16}/></button>
+                 </div>
+               </div>
+               
+               <div className="grid grid-cols-7 gap-1 mb-2">
+                 {weekDaysBN.map(day => (
+                   <div key={day} className="text-center text-[9px] font-black text-slate-400 uppercase">{day}</div>
+                 ))}
+               </div>
+               
+               <div className="grid grid-cols-7 gap-1">
+                 {Array.from({ length: firstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => (
+                   <div key={`empty-${i}`} />
+                 ))}
+                 {Array.from({ length: daysInMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => {
+                   const day = i + 1;
+                   const isToday = new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
+                   return (
+                     <div 
+                       key={day} 
+                       className={`h-9 flex items-center justify-center rounded-xl text-xs font-bold transition-all ${isToday ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                     >
+                       {day}
+                     </div>
+                   );
+                 })}
+               </div>
+
+               <button 
+                onClick={() => setIsCalendarOpen(false)}
+                className="mt-6 w-full py-2 bg-slate-50 dark:bg-slate-800 text-slate-400 font-black text-[9px] uppercase tracking-widest rounded-xl"
+               >
+                 বন্ধ করুন
+               </button>
+             </div>
+           )}
         </div>
 
         <div className="lg:col-span-4 bg-indigo-600 rounded-[32px] p-8 text-white flex flex-col justify-between shadow-lg">

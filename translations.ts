@@ -95,7 +95,9 @@ export const translations = {
     signup_to_save: "ডাটা স্থায়ীভাবে সেভ করতে লগইন করুন",
     ai_name: "জয় কুমার বিশ্বাস",
     ai_role: "এআই অ্যাসিস্ট্যান্ট",
-    ask_joy: "কিছু জিজ্ঞেস করুন..."
+    ask_joy: "কিছু জিজ্ঞেস করুন...",
+    complaint_box: "অভিযোগ ও আইডিয়া",
+    footer_copyright: "© ২০২৫ জয় কুমার বিশ্বাস। সর্বস্বত্ব সংরক্ষিত।"
   },
   en: {
     app_name: "Joy Kumar Biswas",
@@ -192,7 +194,9 @@ export const translations = {
     signup_to_save: "Login to save data permanently",
     ai_name: "Joy Kumar Biswas",
     ai_role: "AI Assistant",
-    ask_joy: "Ask anything..."
+    ask_joy: "Ask anything...",
+    complaint_box: "Complaints & Ideas",
+    footer_copyright: "© 2025 Joy Kumar Biswas. All Rights Reserved."
   }
 };
 
