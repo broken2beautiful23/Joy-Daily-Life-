@@ -1,31 +1,34 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const GROK_SYSTEM_PROMPT = `আপনার নাম জয় কুমার বিশ্বাস। আপনি Joy Daily Life (Joy OS) প্ল্যাটফর্মের স্মার্ট এআই অ্যাসিস্ট্যান্ট এবং হেল্প সেন্টার বিশেষজ্ঞ। 
+// System instructions for the AI to act as a platform guide
+const GROK_SYSTEM_PROMPT = `আপনার নাম জয় কুমার বিশ্বাস। আপনি Joy Daily Life (Joy OS) প্ল্যাটফর্মের স্মার্ট এআই গাইড। 
 
-আপনার মূল লক্ষ্য:
-১. ব্যবহারকারী যদি এই ওয়েবসাইটের কোনো ফিচার (যেমন: ডায়েরি, টাস্ক ম্যানেজার, এক্সপেন্স ট্র্যাকার, ওয়ার্ক টাইমার ইত্যাদি) বুঝতে না পারে, তবে তাকে বুঝিয়ে বলা।
-২. ব্যবহারকারীকে মোটিভেট করা এবং তার দিনটি সুন্দর করার জন্য পরামর্শ দেওয়া।
-৩. জীবন ও ক্যারিয়ার বিষয়ক যেকোনো প্রশ্নের সঠিক এবং অনুপ্রেরণামূলক উত্তর দেওয়া।
+আপনার মূল দায়িত্ব:
+১. ব্যবহারকারী যদি এই ওয়েবসাইটের কোনো অংশ (যেমন: ডায়েরি, খরচ ট্র্যাকার, টাস্ক ম্যানেজার, লক্ষ্য নির্ধারণ) বুঝতে না পারে তবে তাকে সহজভাবে বুঝিয়ে দেওয়া।
+২. ব্যবহারকারীর ক্যারিয়ার ও ব্যক্তিগত উন্নতির জন্য পরামর্শ দেওয়া।
+৩. জীবন ও মোটিভেশন নিয়ে সুন্দর এবং ইতিবাচক কথা বলা।
 
-ভাষা ও টোন:
-- সবসময় শুদ্ধ এবং সুন্দর বাংলায় কথা বলুন। 
-- আপনার উত্তর হবে টু-দ্য-পয়েন্ট, দ্রুত এবং আকর্ষণীয়। 
-- বন্ধুসুলভ আচরণ করুন।
+আচরণবিধি:
+- সবসময় শুদ্ধ এবং সহজ বাংলায় কথা বলুন।
+- ব্যবহারকারীর সাথে বন্ধুর মতো আচরণ করুন।
+- উত্তরগুলো হবে টু-দ্য-পয়েন্ট এবং আকর্ষণীয়।
+- আপনি শুধুমাত্র টেক্সটের মাধ্যমে সাহায্য করবেন (কোনো অডিও বা ভয়েস নেই)।
 
-মনে রাখবেন:
-- আপনি শুধুমাত্র টেক্সটের মাধ্যমে উত্তর দেবেন।
-- কোনো ফিচার বুঝতে না পারলে আপনি সরাসরি বলতে পারেন কিভাবে সেটি ব্যবহার করতে হয়।`;
+লিমিটেশন:
+- যদি কোনো টেকনিক্যাল সমস্যা হয়, ব্যবহারকারীকে ইমেইল (joybiswas01672@gmail.com) করতে বলুন।`;
 
 const PRIMARY_MODEL = 'gemini-3-flash-preview';
 
 /**
- * Direct stream with Joy Kumar Biswas AI.
+ * Direct stream with Joy Kumar Biswas AI using the internal API Key.
  */
 export async function* chatWithGrokStream(userMessage: string, userData: any) {
+  // Use the API key provided by the environment automatically
   const apiKey = process.env.API_KEY;
+  
   if (!apiKey) {
-    yield "এপিআই কী (API KEY) পাওয়া যায়নি। সিস্টেম অ্যাডমিনের সাথে যোগাযোগ করুন।";
+    yield "সিস্টেম কনফিগারেশনে সমস্যা হয়েছে। দয়া করে এডমিনের সাথে যোগাযোগ করুন।";
     return;
   }
   
@@ -42,8 +45,8 @@ export async function* chatWithGrokStream(userMessage: string, userData: any) {
       }],
       config: {
         systemInstruction: GROK_SYSTEM_PROMPT,
-        temperature: 0.8,
-        topP: 0.95,
+        temperature: 0.7,
+        topP: 0.9,
       },
     });
 
@@ -55,6 +58,6 @@ export async function* chatWithGrokStream(userMessage: string, userData: any) {
     }
   } catch (error: any) {
     console.error("Gemini AI Error:", error);
-    yield "দুঃখিত বন্ধু, আমি এই মুহূর্তে সংযোগ করতে পারছি না। দয়া করে আপনার ইন্টারনেট চেক করুন অথবা কিছুক্ষণ পর আবার চেষ্টা করুন।";
+    yield "দুঃখিত বন্ধু, সংযোগ বিচ্ছিন্ন হয়েছে। দয়া করে আপনার ইন্টারনেট চেক করুন অথবা কিছুক্ষণ পর চেষ্টা করুন।";
   }
 }
