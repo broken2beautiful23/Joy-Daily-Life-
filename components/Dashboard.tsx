@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, Wallet, TrendingDown, Loader2, ArrowRight,
   Sparkles, Zap, Star, LayoutGrid, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight,
-  Target, CheckCircle2, Lightbulb, PiggyBank
+  Target, CheckCircle2, Lightbulb, PiggyBank, Bot
 } from 'lucide-react';
 import { translations, Language } from '../translations';
 import { Transaction } from '../types';
@@ -17,9 +17,10 @@ interface DashboardProps {
   userName: string;
   userId: string;
   onNavigate: (tab: string) => void;
+  onOpenAi: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigate }) => {
+const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigate, onOpenAi }) => {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -102,15 +103,24 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, userName, userId, onNavigat
             আপনার ক্যারিয়ার উন্নতি এবং আর্থিক সঞ্চয়ের হিসাব এখন এক নজরে। আজ আপনি নতুন কী শিখবেন?
           </p>
 
-          <div className="flex flex-wrap gap-3 pt-4">
+          <div className="flex flex-wrap gap-4 pt-4">
              <button 
               onClick={() => onNavigate('tasks')}
-              className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg flex items-center gap-2"
+              className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg flex items-center gap-2 hover:bg-indigo-700 transition-all"
              >
                নতুন কাজ যোগ করুন <ArrowRight size={16} />
              </button>
+             <button 
+              onClick={onOpenAi}
+              className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg flex items-center gap-2 hover:bg-white/20 transition-all"
+             >
+               <Bot size={16} className="text-indigo-400" />
+               AI সাহায্য নিন
+             </button>
           </div>
         </div>
+        {/* Abstract shapes for background */}
+        <div className="absolute top-0 right-0 w-1/3 h-full bg-indigo-500/10 blur-[100px] pointer-events-none"></div>
       </div>
 
       {/* QUICK STATS */}

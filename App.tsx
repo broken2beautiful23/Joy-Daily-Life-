@@ -17,6 +17,7 @@ import LifestyleHealth from './components/LifestyleHealth';
 import DailyEssentials from './components/DailyEssentials';
 import EducationCareer from './components/EducationCareer';
 import EntertainmentHobbies from './components/EntertainmentHobbies';
+import FloatingAI from './components/FloatingAI';
 import Profile from './components/Profile';
 import { translations, Language } from './translations';
 import { supabase } from './services/supabase';
@@ -38,6 +39,7 @@ const App: React.FC = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState('ইউজার');
   const [userAvatar, setUserAvatar] = useState('');
+  const [isAiOpen, setIsAiOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   
   // --- Global Timer State ---
@@ -178,7 +180,7 @@ const App: React.FC = () => {
     const effectiveUserId = userId || 'guest_user_id';
     
     switch (activeTab) {
-      case 'dashboard': return <Dashboard lang={lang} userName={userName} userId={effectiveUserId} onNavigate={setActiveTab} />;
+      case 'dashboard': return <Dashboard lang={lang} userName={userName} userId={effectiveUserId} onNavigate={setActiveTab} onOpenAi={() => setIsAiOpen(true)} />;
       case 'essentials': return <DailyEssentials lang={lang} userName={userName} />;
       case 'education': return <EducationCareer lang={lang} userName={userName} />;
       case 'entertainment': return <EntertainmentHobbies lang={lang} userName={userName} />;
@@ -209,7 +211,7 @@ const App: React.FC = () => {
       case 'study': return <StudyPlanner userId={effectiveUserId} />;
       case 'notes': return <Notes userId={effectiveUserId} />;
       case 'memories': return <MemoryGallery userId={effectiveUserId} />;
-      default: return <Dashboard lang={lang} userName={userName} userId={effectiveUserId} onNavigate={setActiveTab} />;
+      default: return <Dashboard lang={lang} userName={userName} userId={effectiveUserId} onNavigate={setActiveTab} onOpenAi={() => setIsAiOpen(true)} />;
     }
   };
 
@@ -400,6 +402,7 @@ const App: React.FC = () => {
           </footer>
         </main>
 
+        <FloatingAI lang={lang} userName={userName} forceOpen={isAiOpen} setForceOpen={setIsAiOpen} />
         {showProfile && userId && <Profile userId={userId} lang={lang} onClose={() => setShowProfile(false)} onProfileUpdate={(newName, newAvatar) => { setUserName(newName); setUserAvatar(newAvatar); }} />}
       </div>
     </div>
